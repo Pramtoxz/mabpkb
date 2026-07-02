@@ -1,45 +1,36 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React, { useState } from 'react';
+import { StatusBar } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import HomeScreen from './src/screens/HomeScreen';
+import TextRecognitionScreen from './src/screens/TextRecognitionScreen';
+import BarcodeScannerScreen from './src/screens/BarcodeScannerScreen';
+import DocumentScannerScreen from './src/screens/DocumentScannerScreen';
+
+type Screen = 'home' | 'text' | 'barcode' | 'document';
 
 function App() {
-  const isDarkMode = useColorScheme() === 'dark';
+  const [screen, setScreen] = useState<Screen>('home');
+
+  const goBack = () => setScreen('home');
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
+      <StatusBar barStyle="dark-content" />
+      {screen === 'home' && (
+        <HomeScreen onNavigate={setScreen} />
+      )}
+      {screen === 'text' && (
+        <TextRecognitionScreen onBack={goBack} />
+      )}
+      {screen === 'barcode' && (
+        <BarcodeScannerScreen onBack={goBack} />
+      )}
+      {screen === 'document' && (
+        <DocumentScannerScreen onBack={goBack} />
+      )}
     </SafeAreaProvider>
   );
 }
-
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
 
 export default App;
