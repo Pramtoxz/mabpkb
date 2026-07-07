@@ -1,0 +1,25 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "src/assets/fonts/Open_Sans/OpenSans-Medium.ttf",
+      "sha1": "1632123e8a78dd095fb987c0cb2ad05063e0648a"
+    },
+    {
+      "path": "src/assets/fonts/Open_Sans/OpenSans-Regular.ttf",
+      "sha1": "576aa669c4ceb3830fde859a4db52916def172af"
+    },
+    {
+      "path": "src/assets/fonts/Open_Sans/OpenSans-SemiBold.ttf",
+      "sha1": "344041aeaad9e07a186cc3a937df915e5d98936f"
+    },
+    {
+      "path": "src/assets/fonts/Poppins/Poppins-Bold.ttf",
+      "sha1": "875cf0cecd647bcf22e79d633d868c1b1ec98dfa"
+    },
+    {
+      "path": "src/assets/fonts/Poppins/Poppins-SemiBold.ttf",
+      "sha1": "8a4ace9392d06bcb7f8ea2f5169b07e4c383a90d"
+    }
+  ]
+}
