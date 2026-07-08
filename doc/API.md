@@ -1,66 +1,101 @@
 # ACIAX API Documentation
 
-## Base URL
-
-```
-http://your-server:8000/api
-```
-
-## Authentication
-
-Semua endpoint API memerlukan header `SECRET-KEY`:
-
-```http
-SECRET-KEY: U2FsdGVkX19jfmhRGNeUJ2TITVhrP0hzNJ9HNv81qSs=
-```
-
-> ⚠️ Gunakan **hyphen** (`SECRET-KEY`), bukan underscore (`SECRET_KEY`). Apache & Nginx secara default menghapus header dengan underscore.
+Base URL: `http://localhost:8000/api`
 
 ---
 
-## Endpoints
+## Autentikasi
 
-### 1. Get Dealer
+Semua API route dilindungi middleware `CheckSecretKey`. Sertakan header di setiap request:
 
-Mencari dealer berdasarkan nomor mesin.
-
-```http
-GET /api/get-dealer?nomesin={nomesin}
+```
+SECRET-KEY: {your-secret-key}
 ```
 
-**Parameter (Query):**
-| Param | Type | Required | Description |
-|-------|------|----------|-------------|
-| `nomesin` | string | ✅ | Nomor mesin kendaraan |
+Nilai key dikonfigurasi di env `SECRET_KEY` (`config/app.php`).
 
-**Response:**
+Selain header, juga bisa dikirim via query parameter `?secret_key={your-secret-key}`.
+
+---
+
+## Daftar Endpoint
+
+| Method | Endpoint                         | Deskripsi                           |
+| ------ | -------------------------------- | ----------------------------------- |
+| GET    | `/api/get-dealer`                | Cari dealer berdasarkan nomor mesin |
+| POST   | `/api/bpkb/process`              | Proses BPKB (upload gambar + data)  |
+| GET    | `/api/bpkb/track/{track}`        | Lacak status proses BPKB            |
+| GET    | `/api/bpkb/track/{track}/stream` | Stream status BPKB via SSE          |
+| GET    | `/api/activity`                  | Ringkasan aktivitas BPKB bulanan    |
+
+---
+
+## 1. GET `/api/get-dealer`
+
+Cari data dealer berdasarkan nomor mesin unit. Query join dari tabel `H1_DOS.stokunit` dan `public.tbldealer` di database `pgsql_nms`.
+
+### Query Parameters
+
+| Param     | Type   | Required | Deskripsi             |
+| --------- | ------ | -------- | --------------------- |
+| `nomesin` | string | Ya       | Nomor mesin kendaraan |
+
+### Contoh Request
+
+```bash
+curl -X GET "http://localhost:8000/api/get-dealer?nomesin=MH1234567890"
+```
+
+### Response
+
+**200 OK**
 
 ```json
 {
   "fk_dealer": "DLR001",
-  "nm_dealer": "Dealer Maju Jaya"
+  "nm_dealer": "Menara Agung Jakarta"
 }
+```
+
+**200 OK (tidak ditemukan)**
+
+```json
+null
 ```
 
 ---
 
-### 2. Process BPKB
+## 2. POST `/api/bpkb/process`
 
-Membuat PDF BPKB dan memproses data secara asynchronous (queued job).
+Proses pembuatan PDF BPKB. Upload 4 gambar halaman BPKB beserta data mesin dan nomor BPKB. Proses dilakukan secara asinkron melalui queue job.
 
-```http
-POST /api/bpkb/process
-Content-Type: multipart/form-data
+### Content-Type
+
+`multipart/form-data`
+
+### Body
+
+| Field     | Type   | Required | Validasi                                        | Deskripsi             |
+| --------- | ------ | -------- | ----------------------------------------------- | --------------------- |
+| `nomesin` | string | Ya       | max:16, exists di `pgsql_nms.stokunit.no_mesin` | Nomor mesin kendaraan |
+| `nobpkb`  | string | Ya       | max:20                                          | Nomor BPKB            |
+| `images`  | file[] | Ya       | size:4, jpeg/png/jpg, max 1048KB per file       | 4 gambar halaman BPKB |
+
+### Contoh Request
+
+```bash
+curl -X POST http://localhost:8000/api/bpkb/process \
+  -F "nomesin=MH1234567890" \
+  -F "nobpkb=BPKB-2026-001" \
+  -F "images=@page1.jpg" \
+  -F "images=@page2.jpg" \
+  -F "images=@page3.jpg" \
+  -F "images=@page4.jpg"
 ```
 
-**Body (multipart/form-data):**
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `nomesin` | string | ✅ | Nomor mesin (max 16 karakter, harus ada di database) |
-| `nobpkb` | string | ✅ | Nomor BPKB (max 20 karakter) |
-| `images` | file[4] | ✅ | Tepat 4 gambar (jpeg/png/jpg, max 1MB per file) |
+### Response
 
-**Response (202 Accepted):**
+**202 Accepted**
 
 ```json
 {
@@ -69,7 +104,7 @@ Content-Type: multipart/form-data
 }
 ```
 
-**Error Response (422):**
+**422 Validation Error**
 
 ```json
 {
@@ -81,485 +116,255 @@ Content-Type: multipart/form-data
 }
 ```
 
+### Pesan Validasi (Bahasa Indonesia)
+
+| Rule                | Pesan                                           |
+| ------------------- | ----------------------------------------------- |
+| `nomesin.required`  | Nomor Mesin harus diisi.                        |
+| `nomesin.string`    | Nomor Mesin harus berupa string.                |
+| `nomesin.max`       | Nomor Mesin tidak boleh lebih dari 16 karakter. |
+| `nomesin.exists`    | Nomor Mesin tidak ditemukan di database.        |
+| `nobpkb.required`   | Nomor BPKB harus diisi.                         |
+| `nobpkb.string`     | Nomor BPKB harus berupa string.                 |
+| `nobpkb.max`        | Nomor BPKB tidak boleh lebih dari 20 karakter.  |
+| `images.required`   | Gambar harus diunggah.                          |
+| `images.array`      | Gambar harus berupa array.                      |
+| `images.size`       | Harus mengunggah tepat 4 gambar.                |
+| `images.*.required` | Setiap gambar harus diunggah.                   |
+| `images.*.image`    | File yang diunggah harus berupa gambar.         |
+| `images.*.mimes`    | Gambar harus berformat JPEG, PNG, atau JPG.     |
+| `images.*.max`      | Ukuran gambar tidak boleh lebih dari 1 MB.      |
+
+### Proses Asinkron (Queue Job)
+
+Setelah response 202, proses berjalan di background dengan 3 stage (max 3 retries):
+
+| Stage                  | Aksi                                                                        | Database      |
+| ---------------------- | --------------------------------------------------------------------------- | ------------- |
+| `create_pdf`           | Kompresi gambar & generate PDF BPKB, lalu hapus gambar temp                 | Local storage |
+| `update_stok_unit`     | Simpan `no_bpkb` ke `tblstock_unit`                                         | pgsql_meta    |
+| `update_tgl_bpkb_siap` | Set `tgl_bpkb_siap = now()` di `tblterima_bpkb` via `tblterima_bpkb_detail` | pgsql_meta    |
+
+Status proses: `queued` → `processing` → `completed` / `failed`
+
+Gunakan `track_id` dari response untuk memantau progres via endpoint track.
+
 ---
 
-### 3. Track Status (One-time)
+## 3. GET `/api/bpkb/track/{track}`
 
-Mendapatkan status proses BPKB sekali (polling).
+Lacak status dan progres pemrosesan BPKB.
 
-```http
-GET /api/bpkb/track/{track_id}
+### Path Parameters
+
+| Param   | Type | Required | Deskripsi                                     |
+| ------- | ---- | -------- | --------------------------------------------- |
+| `track` | UUID | Ya       | ID tracking dari response `/api/bpkb/process` |
+
+### Contoh Request
+
+```bash
+curl -X GET http://localhost:8000/api/bpkb/track/a1b2c3d4-e5f6-7890-abcd-ef1234567890
 ```
 
-**Response:**
+### Response
+
+**200 OK (Processing)**
 
 ```json
 {
   "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "no_mesin": "ABC123456",
-  "no_bpkb": "1234567890",
-  "nama_konsumen": "John Doe",
-  "pdf_path": "bpkb/pdf/John Doe.pdf",
+  "no_mesin": "MH1234567890",
+  "no_bpkb": "BPKB-2026-001",
+  "nama_konsumen": "Budi Santoso",
+  "pdf_path": null,
+  "image_paths": [
+    "bpkb/temp/page1.jpg",
+    "bpkb/temp/page2.jpg",
+    "bpkb/temp/page3.jpg",
+    "bpkb/temp/page4.jpg"
+  ],
+  "stage": "create_pdf",
+  "status": "processing",
+  "error_message": null,
+  "created_at": "2026-07-06T02:58:30.000000Z",
+  "updated_at": "2026-07-06T02:58:35.000000Z"
+}
+```
+
+**200 OK (Completed)**
+
+```json
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "no_mesin": "MH1234567890",
+  "no_bpkb": "BPKB-2026-001",
+  "nama_konsumen": "Budi Santoso",
+  "pdf_path": "bpkb/pdf/Budi Santoso.pdf",
   "image_paths": null,
   "stage": "completed",
   "status": "completed",
   "error_message": null,
-  "created_at": "2026-07-06T10:00:00.000000Z",
-  "updated_at": "2026-07-06T10:00:15.000000Z"
+  "created_at": "2026-07-06T02:58:30.000000Z",
+  "updated_at": "2026-07-06T03:00:15.000000Z"
 }
 ```
 
-**Status Values:**
-| Status | Description |
-|--------|-------------|
-| `queued` | Masih dalam antrian |
-| `processing` | Sedang diproses |
-| `completed` | Selesai |
-| `failed` | Gagal |
+**200 OK (Failed)**
 
-**Stage Values:**
-| Stage | Description |
-|-------|-------------|
-| `pending` | Menunggu diproses |
-| `create_pdf` | Kompresi gambar & generate PDF |
-| `update_stok_unit` | Simpan nomor BPKB ke stok unit |
-| `update_tgl_bpkb_siap` | Set tanggal BPKB siap |
-| `completed` | Semua proses selesai |
+```json
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "no_mesin": "MH1234567890",
+  "no_bpkb": "BPKB-2026-001",
+  "nama_konsumen": "Budi Santoso",
+  "pdf_path": null,
+  "image_paths": null,
+  "stage": "update_stok_unit",
+  "status": "failed",
+  "error_message": "Connection to database pgsql_meta failed.",
+  "created_at": "2026-07-06T02:58:30.000000Z",
+  "updated_at": "2026-07-06T02:59:45.000000Z"
+}
+```
+
+**404 Not Found**
+
+```json
+{
+  "message": "No query results for model [App\\Models\\BpkbProcessTrack]."
+}
+```
+
+### Field Reference
+
+| Field           | Type           | Deskripsi                                                                                                                                                   |
+| --------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`            | UUID           | ID unik tracking                                                                                                                                            |
+| `no_mesin`      | string         | Nomor mesin kendaraan                                                                                                                                       |
+| `no_bpkb`       | string         | Nomor BPKB                                                                                                                                                  |
+| `nama_konsumen` | string\|null   | Nama konsumen dari DB stok unit (`nm_customer`)                                                                                                             |
+| `pdf_path`      | string\|null   | Path file PDF hasil (akses via `/storage/{pdf_path}`)                                                                                                       |
+| `image_paths`   | string[]\|null | Path gambar yang diupload (null setelah cleanup)                                                                                                            |
+| `stage`         | string         | Stage saat ini: `pending`, `create_pdf`, `update_stok_unit`, `update_tgl_bpkb_siap`, `completed` (saat gagal, stage tetap di posisi terakhir sebelum error) |
+| `status`        | string         | Status proses: `queued`, `processing`, `completed`, `failed`                                                                                                |
+| `error_message` | string\|null   | Pesan error jika gagal                                                                                                                                      |
+| `created_at`    | timestamp      | Waktu pembuatan record                                                                                                                                      |
+| `updated_at`    | timestamp      | Waktu terakhir update                                                                                                                                       |
 
 ---
 
-### 4. Track Stream (Realtime - SSE)
+## 4. GET `/api/bpkb/track/{track}/stream`
 
-Mendapatkan update realtime menggunakan Server-Sent Events.
+Stream status pemrosesan BPKB secara real-time menggunakan **Server-Sent Events (SSE)**. Endpoint ini melakukan polling database setiap iterasi dan mengirim event saat `stage` atau `status` berubah. Stream otomatis berhenti ketika status `completed` atau `failed`.
 
-```http
-GET /api/bpkb/track/{track_id}/stream
+### Path Parameters
+
+| Param   | Type | Required | Deskripsi                                     |
+| ------- | ---- | -------- | --------------------------------------------- |
+| `track` | UUID | Ya       | ID tracking dari response `/api/bpkb/process` |
+
+### Contoh Request
+
+```bash
+curl -X GET http://localhost:8000/api/bpkb/track/a1b2c3d4-e5f6-7890-abcd-ef1234567890/stream \
+  -H "Accept: text/event-stream"
 ```
 
-> ⚠️ EventSource tidak bisa mengirim custom headers. Gunakan query parameter `secret_key`.
+### Contoh dengan JavaScript (EventSource)
 
-**Response (text/event-stream):**
+```javascript
+const trackId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const source = new EventSource(`/api/bpkb/track/${trackId}/stream`);
+
+source.onmessage = event => {
+  const data = JSON.parse(event.data);
+  console.log('Stage:', data.stage, 'Status:', data.status);
+  if (data.pdf_url) console.log('PDF:', data.pdf_url);
+  if (data.status === 'completed' || data.status === 'failed') {
+    source.close();
+  }
+};
+```
+
+### Response (SSE Stream)
 
 ```
 data: {"stage":"create_pdf","status":"processing","pdf_url":null,"error_message":null}
 
-data: {"stage":"update_stok_unit","status":"processing","pdf_url":null,"error_message":null}
+data: {"stage":"update_stok_unit","status":"processing","pdf_url":"http://localhost:8000/storage/bpkb/pdf/Budi Santoso.pdf","error_message":null}
 
-data: {"stage":"update_tgl_bpkb_siap","status":"processing","pdf_url":null,"error_message":null}
-
-data: {"stage":"completed","status":"completed","pdf_url":"http://server:8000/storage/bpkb/pdf/John Doe.pdf","error_message":null}
+data: {"stage":"completed","status":"completed","pdf_url":"http://localhost:8000/storage/bpkb/pdf/Budi Santoso.pdf","error_message":null}
 ```
+
+### SSE Data Fields
+
+| Field           | Type         | Deskripsi                                               |
+| --------------- | ------------ | ------------------------------------------------------- |
+| `stage`         | string       | Stage saat ini                                          |
+| `status`        | string       | Status proses                                           |
+| `pdf_url`       | string\|null | URL lengkap PDF (tersedia setelah `create_pdf` selesai) |
+| `error_message` | string\|null | Pesan error jika gagal                                  |
+
+### Response Headers
+
+| Header              | Value               |
+| ------------------- | ------------------- |
+| `Content-Type`      | `text/event-stream` |
+| `Cache-Control`     | `no-cache`          |
+| `Connection`        | `keep-alive`        |
+| `X-Accel-Buffering` | `no`                |
 
 ---
 
-## React Native Implementation
+## 5. GET `/api/activity`
 
-### Dependencies
+Ringkasan aktivitas BPKB untuk bulan berjalan. Menghitung target BPKB dari `tblterima_bpkb` dan BPKB yang sudah selesai dari tracking.
+
+### Contoh Request
 
 ```bash
-npm install axios react-native-event-source
+curl -X GET http://localhost:8000/api/activity
 ```
 
-### Config API
+### Response
 
-```typescript
-// src/config/api.ts
-import axios from 'axios';
+**200 OK**
 
-const API_BASE = 'http://your-server:8000/api';
-const SECRET_KEY = 'U2FsdGVkX19jfmhRGNeUJ2TITVhrP0hzNJ9HNv81qSs=';
-
-export const api = axios.create({
-  baseURL: API_BASE,
-  headers: {
-    'SECRET-KEY': SECRET_KEY,
-    Accept: 'application/json',
-  },
-});
-```
-
-### Service Layer
-
-```typescript
-// src/services/bpkbService.ts
-import { api } from '../config/api';
-
-interface Dealer {
-  fk_dealer: string;
-  nm_dealer: string;
-}
-
-interface BpkbTrack {
-  id: string;
-  no_mesin: string;
-  no_bpkb: string;
-  nama_konsumen: string | null;
-  pdf_path: string | null;
-  stage: string;
-  status: string;
-  error_message: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-// Get dealer by nomor mesin
-export const getDealer = async (nomesin: string): Promise<Dealer> => {
-  const { data } = await api.get<Dealer>('/get-dealer', {
-    params: { nomesin },
-  });
-  return data;
-};
-
-// Process BPKB (upload 4 images + data)
-export const processBpkb = async (
-  nomesin: string,
-  nobpkb: string,
-  images: { uri: string; type: string; name: string }[],
-): Promise<{ message: string; track_id: string }> => {
-  const formData = new FormData();
-  formData.append('nomesin', nomesin);
-  formData.append('nobpkb', nobpkb);
-
-  images.forEach((img, index) => {
-    formData.append('images[]', {
-      uri: img.uri,
-      type: img.type || 'image/jpeg',
-      name: img.name || `image_${index}.jpg`,
-    } as any);
-  });
-
-  const { data } = await api.post('/bpkb/process', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return data;
-};
-
-// Track status (one-time polling)
-export const getTrackStatus = async (trackId: string): Promise<BpkbTrack> => {
-  const { data } = await api.get<BpkbTrack>(`/bpkb/track/${trackId}`);
-  return data;
-};
-```
-
-### SSE Hook (Realtime Tracking)
-
-```typescript
-// src/hooks/useBpkbStream.ts
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { EventSource } from 'react-native-event-source';
-
-const API_BASE = 'http://your-server:8000/api';
-const SECRET_KEY = 'U2FsdGVkX19jfmhRGNeUJ2TITVhrP0hzNJ9HNv81qSs=';
-
-interface StreamData {
-  stage: string;
-  status: string;
-  pdf_url: string | null;
-  error_message: string | null;
-}
-
-export function useBpkbStream(trackId: string | null) {
-  const [data, setData] = useState<StreamData | null>(null);
-  const [connected, setConnected] = useState(false);
-  const esRef = useRef<EventSource | null>(null);
-
-  const disconnect = useCallback(() => {
-    if (esRef.current) {
-      esRef.current.close();
-      esRef.current = null;
-      setConnected(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!trackId) return;
-
-    const url = `${API_BASE}/bpkb/track/${trackId}/stream?secret_key=${SECRET_KEY}`;
-    const es = new EventSource(url);
-    esRef.current = es;
-
-    es.addEventListener('open', () => setConnected(true));
-
-    es.addEventListener('message', (event: any) => {
-      const parsed: StreamData = JSON.parse(event.data);
-      setData(parsed);
-
-      // Auto-close when done
-      if (parsed.status === 'completed' || parsed.status === 'failed') {
-        disconnect();
-      }
-    });
-
-    es.addEventListener('error', () => {
-      setConnected(false);
-      disconnect();
-    });
-
-    return () => disconnect();
-  }, [trackId, disconnect]);
-
-  return { data, connected, disconnect };
+```json
+{
+  "target_bpkb": 150,
+  "completed_bpkb": 42,
+  "pending_bpkb": 108
 }
 ```
 
-### Example Screen: Process BPKB
+### Field Reference
 
-```tsx
-// src/screens/ProcessBpkbScreen.tsx
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Button,
-  Alert,
-  Image,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
-import { launchImageLibrary } from 'react-native-image-picker';
-import { processBpkb } from '../services/bpkbService';
-import { useBpkbStream } from '../hooks/useBpkbStream';
-
-const STAGE_LABELS: Record<string, string> = {
-  pending: 'Menunggu...',
-  create_pdf: 'Membuat PDF...',
-  update_stok_unit: 'Update Stok Unit...',
-  update_tgl_bpkb_siap: 'Update Tanggal BPKB Siap...',
-  completed: 'Selesai!',
-  failed: 'Gagal',
-};
-
-export default function ProcessBpkbScreen() {
-  const [nomesin, setNomesin] = useState('');
-  const [nobpkb, setNobpkb] = useState('');
-  const [images, setImages] = useState<any[]>([]);
-  const [trackId, setTrackId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  // SSE realtime hook
-  const { data: streamData, connected } = useBpkbStream(trackId);
-
-  const pickImages = async () => {
-    const result = await launchImageLibrary({
-      mediaType: 'photo',
-      selectionLimit: 4,
-    });
-    if (result.assets && result.assets.length === 4) {
-      setImages(result.assets);
-    } else {
-      Alert.alert('Error', 'Pilih tepat 4 gambar');
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (images.length !== 4) {
-      Alert.alert('Error', 'Pilih tepat 4 gambar');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const result = await processBpkb(
-        nomesin,
-        nobpkb,
-        images.map((img, i) => ({
-          uri: img.uri,
-          type: img.type || 'image/jpeg',
-          name: img.fileName || `image_${i}.jpg`,
-        })),
-      );
-      setTrackId(result.track_id);
-    } catch (err: any) {
-      const msg = err.response?.data?.errors
-        ? Object.values(err.response.data.errors).flat().join('\n')
-        : err.message;
-      Alert.alert('Gagal', msg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <ScrollView style={{ flex: 1, padding: 16 }}>
-      <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16 }}>
-        Proses BPKB
-      </Text>
-
-      <Text>Nomor Mesin</Text>
-      <TextInput
-        value={nomesin}
-        onChangeText={setNomesin}
-        placeholder="Masukkan nomor mesin"
-        style={{
-          borderWidth: 1,
-          borderColor: '#ccc',
-          borderRadius: 8,
-          padding: 10,
-          marginBottom: 12,
-        }}
-      />
-
-      <Text>Nomor BPKB</Text>
-      <TextInput
-        value={nobpkb}
-        onChangeText={setNobpkb}
-        placeholder="Masukkan nomor BPKB"
-        style={{
-          borderWidth: 1,
-          borderColor: '#ccc',
-          borderRadius: 8,
-          padding: 10,
-          marginBottom: 12,
-        }}
-      />
-
-      <Button title="Pilih 4 Gambar" onPress={pickImages} />
-
-      {images.length > 0 && (
-        <View
-          style={{ flexDirection: 'row', flexWrap: 'wrap', marginVertical: 12 }}
-        >
-          {images.map((img, i) => (
-            <Image
-              key={i}
-              source={{ uri: img.uri }}
-              style={{ width: 80, height: 80, margin: 4, borderRadius: 8 }}
-            />
-          ))}
-        </View>
-      )}
-
-      <Button
-        title={loading ? 'Mengirim...' : 'Proses BPKB'}
-        onPress={handleSubmit}
-        disabled={loading}
-      />
-
-      {/* Realtime Progress */}
-      {trackId && (
-        <View
-          style={{
-            marginTop: 24,
-            padding: 16,
-            backgroundColor: '#f0f9ff',
-            borderRadius: 12,
-          }}
-        >
-          <Text style={{ fontWeight: 'bold', marginBottom: 8 }}>
-            Status: {streamData?.status || 'queued'} {connected ? '🟢' : '🔴'}
-          </Text>
-          <Text>Stage: {STAGE_LABELS[streamData?.stage || 'pending']}</Text>
-
-          {streamData?.status === 'completed' && streamData.pdf_url && (
-            <Button
-              title="Download PDF"
-              onPress={() => {
-                // Open PDF URL or download
-                console.log('PDF URL:', streamData.pdf_url);
-              }}
-            />
-          )}
-
-          {streamData?.error_message && (
-            <Text style={{ color: 'red', marginTop: 8 }}>
-              {streamData.error_message}
-            </Text>
-          )}
-        </View>
-      )}
-    </ScrollView>
-  );
-}
-```
-
-### Example Screen: Get Dealer
-
-```tsx
-// src/screens/DealerScreen.tsx
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Alert } from 'react-native';
-import { getDealer } from '../services/bpkbService';
-
-export default function DealerScreen() {
-  const [nomesin, setNomesin] = useState('');
-  const [dealer, setDealer] = useState<{
-    fk_dealer: string;
-    nm_dealer: string;
-  } | null>(null);
-
-  const handleSearch = async () => {
-    try {
-      const data = await getDealer(nomesin);
-      setDealer(data);
-    } catch (err: any) {
-      Alert.alert(
-        'Error',
-        err.response?.data?.message || 'Dealer tidak ditemukan',
-      );
-      setDealer(null);
-    }
-  };
-
-  return (
-    <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16 }}>
-        Cari Dealer
-      </Text>
-
-      <Text>Nomor Mesin</Text>
-      <TextInput
-        value={nomesin}
-        onChangeText={setNomesin}
-        placeholder="Masukkan nomor mesin"
-        style={{
-          borderWidth: 1,
-          borderColor: '#ccc',
-          borderRadius: 8,
-          padding: 10,
-          marginBottom: 12,
-        }}
-      />
-
-      <Button title="Cari" onPress={handleSearch} />
-
-      {dealer && (
-        <View
-          style={{
-            marginTop: 16,
-            padding: 16,
-            backgroundColor: '#f0f9ff',
-            borderRadius: 12,
-          }}
-        >
-          <Text>Kode Dealer: {dealer.fk_dealer}</Text>
-          <Text>Nama Dealer: {dealer.nm_dealer}</Text>
-        </View>
-      )}
-    </View>
-  );
-}
-```
+| Field            | Type    | Deskripsi                                           |
+| ---------------- | ------- | --------------------------------------------------- |
+| `target_bpkb`    | integer | Total target BPKB bulan ini dari `tblterima_bpkb`   |
+| `completed_bpkb` | integer | Total BPKB yang sudah selesai diproses              |
+| `pending_bpkb`   | integer | Sisa BPKB yang belum selesai (`target - completed`) |
 
 ---
 
-## Error Codes
+## Download PDF
 
-| Code  | Description                               |
-| ----- | ----------------------------------------- |
-| `200` | Success                                   |
-| `202` | Accepted (queued for processing)          |
-| `401` | Unauthorized (invalid/missing SECRET_KEY) |
-| `404` | Track not found                           |
-| `422` | Validation error                          |
-| `500` | Server error                              |
+Setelah status `completed`, file PDF dapat diakses melalui:
 
----
+```
+GET /storage/{pdf_path}
+```
 
-## Notes
+Contoh:
 
-- `SECRET_KEY` dikirim via header untuk semua request biasa, atau via query param `?secret_key=...` untuk SSE
-- Images harus tepat 4 file, format JPEG/PNG/JPG, max 1MB per file
-- `track_id` berupa UUID, simpan untuk tracking status
-- PDF tersedia di `{BASE_URL}/storage/{pdf_path}` setelah status `completed`
-- SSE connection otomatis tertutup saat status `completed` atau `failed`
+```
+GET /storage/bpkb/pdf/Budi Santoso.pdf
+```
+
+Pastikan sudah menjalankan:
+
+```bash
+php artisan storage:link
+```

@@ -1,0 +1,23 @@
+diff --git a/node_modules/react-native-vision-camera/android/build.gradle b/node_modules/react-native-vision-camera/android/build.gradle
+index e084cd8..03662a4 100644
+--- a/node_modules/react-native-vision-camera/android/build.gradle
++++ b/node_modules/react-native-vision-camera/android/build.gradle
+@@ -73,7 +73,7 @@ repositories {
+ }
+ 
+ android {
+-  namespace "com.mrousavy.camera.example"
++  namespace "com.mrousavy.camera"
+ 
+   // Used to override the NDK path/version on internal CI or by allowing
+   // users to customize the NDK path/version from their root project (e.g. for M1 support)
+diff --git a/node_modules/react-native-vision-camera/android/src/main/AndroidManifest.xml b/node_modules/react-native-vision-camera/android/src/main/AndroidManifest.xml
+index f5a395b..0a0938a 100644
+--- a/node_modules/react-native-vision-camera/android/src/main/AndroidManifest.xml
++++ b/node_modules/react-native-vision-camera/android/src/main/AndroidManifest.xml
+@@ -1,4 +1,3 @@
+-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+-          package="com.mrousavy.camera">
++<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+ 
+ </manifest>

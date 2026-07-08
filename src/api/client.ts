@@ -9,8 +9,6 @@ interface RequestOptions {
   isMultipart?: boolean;
 }
 
-const SECRET_KEY = 'U2FsdGVkX19jfmhRGNeUJ2TITVhrP0hzNJ9HNv81qSs=';
-
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestOptions = {},
@@ -19,7 +17,7 @@ export async function apiRequest<T>(
 
   const requestHeaders: Record<string, string> = {
     Accept: 'application/json',
-    'SECRET-KEY': SECRET_KEY,
+    'SECRET-KEY': Config.SECRET_KEY ?? '',
     ...headers,
   };
 

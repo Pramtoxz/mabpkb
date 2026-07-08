@@ -76,3 +76,101 @@ export function BatchIcon({size = 24, color = Colors.neutral}: IconProps) {
     </Svg>
   );
 }
+
+export function BackIcon({size = 24, color = Colors.neutral}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M19 12H5M12 19l-7-7 7-7"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function SearchIcon({size = 24, color = Colors.neutral}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M11 19a8 8 0 100-16 8 8 0 000 16z"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M21 21l-4.35-4.35"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function NotificationIcon({size = 24, color = Colors.neutral}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M13.73 21a2 2 0 01-3.46 0"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function MoreIcon({size = 24, color = Colors.neutral}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 5v.01M12 12v.01M12 19v.01"
+        stroke={color}
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function CheckIcon({size = 24, color = '#16a34a'}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M20 6L9 17l-5-5"
+        stroke={color}
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function XIcon({size = 24, color = Colors.destructive}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M18 6L6 18M6 6l12 12"
+        stroke={color}
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}

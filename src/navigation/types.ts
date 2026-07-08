@@ -5,9 +5,10 @@ export type HomeStackParamList = {
 };
 
 export type ScanStackParamList = {
-  ScanIdentity: undefined;
-  ScanNoMesin: undefined;
-  ScanBarcode: undefined;
+  ScanStep1: undefined;
+  ScanStep2: undefined;
+  ScanStep3: undefined;
+  ScanStep4: undefined;
   Review: undefined;
 };
 

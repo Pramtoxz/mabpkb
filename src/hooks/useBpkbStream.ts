@@ -2,8 +2,6 @@ import {useEffect, useRef, useState, useCallback} from 'react';
 import {EventSource} from 'react-native-event-source';
 import {Config} from 'react-native-config';
 
-const SECRET_KEY = 'U2FsdGVkX19jfmhRGNeUJ2TITVhrP0hzNJ9HNv81qSs=';
-
 export interface StreamData {
   stage: string;
   status: string;
@@ -29,7 +27,7 @@ export function useBpkbStream(trackId: string | null) {
       return;
     }
 
-    const url = `${Config.API_BASE_URL}/api/bpkb/track/${trackId}/stream?secret_key=${SECRET_KEY}`;
+    const url = `${Config.API_BASE_URL}/api/bpkb/track/${trackId}/stream?secret_key=${Config.SECRET_KEY}`;
     const es = new EventSource(url);
     esRef.current = es;
 

@@ -1,10 +1,10 @@
 > Setiap sesi wajib baca file ini sebelum mulai kerja.
 
-## STATUS TERKINI (2026-07-06 15:48)
+## STATUS TERKINI (2026-07-08 10:56)
 
 ### Sudah Selesai
 - ✅ Design system (warna, font, images)
-- ✅ API client (fetch + SECRET-KEY header)
+- ✅ API client (fetch + SECRET-KEY dari .env via react-native-config)
 - ✅ Endpoint getDealer, processBpkb, trackBpkb
 - ✅ SSE hook (useBpkbStream)
 - ✅ Navigasi (bottom tab liquid glass + stack per tab)
@@ -14,15 +14,22 @@
 - ✅ ScanBarcodeScreen (foto 4 + barcode)
 - ✅ ReviewScreen (review + submit /process)
 - ✅ TrackStatusScreen (SSE realtime)
-- ✅ HomeScreen (dashboard statistik)
+- ✅ HomeScreen (dashboard statistik — placeholder, belum integrate API)
 - ✅ Lint ✅ TypeScript ✅
+- ✅ LiquidGlassTabBar: pill shape active indicator, center button dynamic position, hidden on camera tab
+- ✅ CollapsibleTopAppBar (M3 Expressive, Reanimated scroll-driven)
+- ✅ TabNavContext (share setActiveTab antar komponen)
+- ✅ Back button: ScanIdentity & Batch → back ke Home tab via BackHandler + header back arrow
+- ✅ SECRET-KEY: hapus hardcoded, baca dari .env via Config.SECRET_KEY
+- ✅ TabIcons: HomeIcon, CameraIcon, BatchIcon, BackIcon, SearchIcon, NotificationIcon, MoreIcon
 
-### Belum Dikerjakan
+### Belum Dikerjakan (Prioritas)
+- ⏳ **[TINGGI] HomeScreen redesign: progress bar hero + 2 stat cards + CTA "Mulai Scan" + pull-to-refresh + CollapsibleTopAppBar**
+- ⏳ **[TINGGI] TrackStatusScreen redesign: stepper progress 4 tahap + tombol "Buka PDF" + CollapsibleTopAppBar + refresh action**
+- ⏳ **[SEDANG] endpoints.ts: tambah `getActivity()` → GET /api/activity**
 - ⏳ Testing di device fisik
-- ⏳ HomeScreen: statistik real (query dari API/SQLite lokal)
 - ⏳ Error handling lebih robust (retry, offline state)
 - ⏳ UI polish (loading shimmer, empty state, dll)
-- ⏳ Hapus file lama yang tidak dipakai (jika ada)
 
 ### Build Info
 - Gradle: `org.gradle.jvmargs=-Xmx1536m` (sesuaikan RAM)
@@ -71,12 +78,13 @@
 
 Berdasarkan API.md, step yang perlu diimplementasi:
 
-| Step | Endpoint | Auth | Fungsi |
-|------|----------|------|--------|
-| 1 | `GET /api/get-dealer?nomesin=...` | SECRET-KEY header | Ambil nama dealer |
-| 2 | `POST /api/bpkb/process` | SECRET-KEY header | Upload 4 foto + nomesin + nobpkb (multipart) |
-| 3 | `GET /api/bpkb/track/{id}` | SECRET-KEY header | Cek status proses (polling) |
-| 4 | `GET /api/bpkb/track/{id}/stream` | SECRET-KEY query param | SSE realtime tracking |
+| Step | Endpoint | Auth | Fungsi | Status |
+|------|----------|------|--------|--------|
+| 1 | `GET /api/get-dealer?nomesin=...` | SECRET-KEY header | Ambil nama dealer | ✅ |
+| 2 | `POST /api/bpkb/process` | SECRET-KEY header | Upload 4 foto + nomesin + nobpkb (multipart) | ✅ |
+| 3 | `GET /api/bpkb/track/{id}` | SECRET-KEY header | Cek status proses (polling) | ✅ |
+| 4 | `GET /api/bpkb/track/{id}/stream` | SECRET-KEY query param | SSE realtime tracking | ✅ |
+| 5 | `GET /api/activity` | SECRET-KEY header | Ringkasan aktivitas BPKB bulanan | ⏳ belum |
 
 ## Notes & Saran
 
@@ -160,56 +168,67 @@ Lokasi: `src/assets/images/`
 
 ### Konfigurasi
 
-- `.env` → `API_BASE_URL=https://aciax.menara-agung.com`
+- `.env` → `API_BASE_URL=https://aciax.menara-agung.com` + `SECRET-KEY=U2Fsd...`
 - `.env` sudah ditambahkan ke `.gitignore`
 - `android/app/build.gradle` → sudah tambah `dotenv.gradle`
-- Type declaration: `src/types/react-native-config.d.ts`
-- API client: pakai `fetch` native (zero dependency) + `SECRET-KEY` header
+- Type declaration: `src/types/react-native-config.d.ts` (include `API_BASE_URL`, `SECRET_KEY`)
+- API client: pakai `fetch` native (zero dependency) + `Config.SECRET_KEY` dari .env
 - State management: React Context (cukup untuk 4 endpoint)
-- Auth: Tidak pakai login, pakai `SECRET-KEY` header (fixed)
-- SSE: `react-native-event-source` + `useBpkbStream` hook
+- Auth: Tidak pakai login, pakai `SECRET-KEY` header (value dari .env)
+- SSE: `react-native-event-source` + `useBpkbStream` hook (secret_key via query param)
 
 ### Struktur Folder
 
 ```
 src/
 ├── api/
-│   ├── client.ts          (fetch wrapper + SECRET-KEY header)
-│   ├── endpoints.ts       (getDealer, processBpkb, trackBpkb)
+│   ├── client.ts          (fetch wrapper + Config.SECRET_KEY dari .env)
+│   ├── endpoints.ts       (getDealer, processBpkb, trackBpkb, getActivity)
 │   └── index.ts
 ├── assets/
+│   ├── audio/
+│   │   └── sound.mp3      (feedback audio untuk pedal flow)
 │   ├── fonts/
 │   ├── images/
 │   └── lottie/
 ├── components/
-│   ├── LiquidGlassTabBar.tsx  (custom iOS 27 liquid glass bottom tab)
-│   └── TabIcons.tsx           (SVG icons: Home, Camera, Batch)
+│   ├── CollapsibleTopAppBar.tsx  (M3 Expressive collapsing header + useCollapsibleHeader hook)
+│   ├── CustomAlert.tsx           (modal alert: alert, confirm, success, error)
+│   ├── LiquidGlassTabBar.tsx     (custom liquid glass bottom tab, pill active indicator)
+│   ├── ScanFeedback.tsx          (✓ besar hijau, ✕ besar merah, hasil OCR/BC di tengah layar)
+│   ├── ScanStepIndicator.tsx     (progress ①②③④ di atas layar scan)
+│   └── TabIcons.tsx              (SVG icons: Home, Camera, Batch, Back, Search, Notification, More)
 ├── constants/
 │   ├── colors.ts
 │   ├── fonts.ts
 │   ├── images.ts
 │   └── index.ts
 ├── contexts/
-│   └── ScanContext.tsx     (scan flow state: photos, nomesin, nobpkb, dealer)
+│   ├── AlertContext.tsx   (global alert state + showError, showSuccess, showConfirm)
+│   ├── ScanContext.tsx     (scan flow state: photos, nomesin, nobpkb, dealer)
+│   └── TabNavContext.tsx   (share setActiveTab/activeTab antar komponen)
 ├── hooks/
-│   └── useBpkbStream.ts   (SSE realtime tracking)
+│   ├── useBpkbStream.ts   (SSE realtime tracking)
+│   ├── useSound.ts        (play/stop sound.mp3 untuk feedback audio)
+│   └── useVolumeKey.ts    (listen Volume Up dari external keyboard/bluetooth shutter)
 ├── navigation/
 │   ├── types.ts           (type-safe params)
-│   ├── AppNavigator.tsx   (root: bottom tabs)
+│   ├── AppNavigator.tsx   (root: bottom tabs + TabNavProvider + AlertProvider)
 │   ├── HomeStack.tsx      (Home tab)
-│   ├── ScanStack.tsx      (Camera tab - scan flow)
+│   ├── ScanStack.tsx      (Camera tab - pedal-driven scan flow)
 │   ├── BatchStack.tsx     (Batch tab - tracking)
 │   └── index.ts
 ├── screens/
 │   ├── home/
 │   │   └── HomeScreen.tsx
 │   ├── scan/
-│   │   ├── ScanIdentityScreen.tsx   (foto 1 & 2)
-│   │   ├── ScanNoMesinScreen.tsx    (foto 3 + OCR + getDealer)
-│   │   ├── ScanBarcodeScreen.tsx    (foto 4 + barcode)
-│   │   └── ReviewScreen.tsx         (review + submit)
+│   │   ├── ScanStep1Screen.tsx   (foto halaman 1 — pedal → kamera → auto-next)
+│   │   ├── ScanStep2Screen.tsx   (foto halaman 2 — pedal → kamera → auto-next)
+│   │   ├── ScanStep3Screen.tsx   (foto halaman 3 — pedal → kamera → OCR → auto-next)
+│   │   ├── ScanStep4Screen.tsx   (foto barcode — pedal → kamera → scan → auto-submit)
+│   │   └── ReviewScreen.tsx      (edge case only — manual edit)
 │   └── track/
-│       └── TrackStatusScreen.tsx    (SSE realtime)
+│       └── TrackStatusScreen.tsx    (SSE realtime + stepper)
 └── types/
     └── react-native-config.d.ts
 ```
@@ -227,25 +246,33 @@ Bottom Tab (Liquid Glass)
 Tab 1: Home Stack
   └── HomeMain (dashboard statistik)
 
-Tab 2: Scan Stack (center button)
-  ├── ScanIdentity → foto 1 & 2 (simpan)
-  ├── ScanNoMesin → foto 3 → OCR → hit getDealer
-  ├── ScanBarcode → foto 4 → scan barcode No BPKB
-  └── Review → review semua data → hit /process
+Tab 2: Scan Stack (center button) — pedal-driven flow
+  ├── ScanStep1 → foto halaman 1 → auto-next
+  ├── ScanStep2 → foto halaman 2 → auto-next
+  ├── ScanStep3 → foto halaman 3 → OCR → auto-next
+  ├── ScanStep4 → foto barcode → scan → auto-submit
+  └── Review → edge case only (edit manual)
 
 Tab 3: Batch Stack
   └── TrackStatus (SSE realtime)
 ```
 
-### Scan Flow (sesuai flow.md)
+### Scan Flow (Pedal-Driven — sesuai diskusi 2026-07-08)
 
 ```
-1. ScanIdentity: Foto halaman 1 & 2 BPKB → simpan di context
-2. ScanNoMesin: Foto halaman 3 → OCR (ML Kit) → regex ambil No Mesin → hit getDealer API
-3. ScanBarcode: Foto halaman 4 → scan barcode (ML Kit) → ambil No BPKB
-4. Review: Review semua data + foto → submit ke /api/bpkb/process
-5. TrackStatus: SSE realtime tracking → status completed/failed
+Step 1: pedal → kamera → foto halaman 1 → ✓ beep → auto-next
+Step 2: pedal → kamera → foto halaman 2 → ✓ beep → auto-next
+Step 3: pedal → kamera → foto halaman 3 → OCR → ✓ "nomesin" beep → auto-next
+Step 4: pedal → kamera → foto barcode → scan → ✓ "nobpkb" beep → auto-submit
+                                             ↓
+                                       ✓✓✓ "Berhasil" beep beep beep → auto-reset
 ```
+
+- 4x pedal press, 0x touch (happy path)
+- Error: pause + input manual besar + pedal confirm
+- ReviewScreen: edge case only (bukan flow utama)
+- Auto-submit setelah step 4 kalau semua data OK
+- Double-confirm: 1x press = ringkasan, 2x press = kirim
 
 ### Context: ScanContext
 
@@ -259,7 +286,33 @@ State antar screen scan flow:
 - Style: iOS 27 Liquid Glass (frosted glass effect)
 - 3 tab: Home, Camera (center, raised), Batch
 - Center button: lebih besar, naik ke atas, animasi pulse + sway
+- Tab aktif: pill shape primary color + icon putih
+- Tab camera aktif: tab bar hidden (slide-down animation) agar tidak menutupi content
 - Package: `@react-navigation/bottom-tabs`, `react-native-reanimated`, `react-native-svg`
+
+### CollapsibleTopAppBar (M3 Expressive)
+
+- Lokasi: `src/components/CollapsibleTopAppBar.tsx`
+- Export: `CollapsibleTopAppBar` (default), `useCollapsibleHeader()`, `EXPANDED_HEIGHT`, `COLLAPSED_HEIGHT`
+- Expanded: title 28px Poppins-Bold left-aligned, subtitle visible
+- Collapsed: title 18px Poppins-SemiBold centered, subtitle hidden
+- Surface tint: transparent → rgba(248,250,252,1) saat scroll
+- Back button: rounded-square 40px, borderRadius 12, bg rgba(0,35,102,0.08)
+- Action buttons: circular 40px, 48dp touch target (hitSlop 8)
+- Scroll driven: Reanimated useAnimatedScrollHandler + 5 useAnimatedStyle interpolations
+
+### TabNavContext
+
+- Lokasi: `src/contexts/TabNavContext.tsx`
+- Fungsi: share `setActiveTab` dan `activeTab` antar komponen (AppNavigator → ScanStack → BatchStack)
+- Digunakan: BackHandler back ke Home, header back button
+
+### Back Button Behavior
+
+- ScanIdentity (root scan stack): BackHandler Android + header back arrow → `setActiveTab(0)` (Home)
+- ScanNoMesin/ScanBarcode/Review: native stack back navigation (standard)
+- TrackStatus (root batch stack): BackHandler Android + header back arrow → `setActiveTab(0)` (Home)
+- Home tab: BackHandler Android → default (tutup app)
 
 ## Larangan Tambahan
 
@@ -267,3 +320,148 @@ State antar screen scan flow:
 - DILARANG buat file baru kalau file yang sama sudah ada dan bisa diedit
 - DILARANG commit tanpa diminta user
 - DILARANG jawab panjang lebar kalau bisa 1-3 baris
+
+## Keputusan Desain UI (2026-07-08)
+
+### HomeScreen — Redesign
+
+**Data source:** `GET /api/activity` → `target_bpkb`, `completed_bpkb`, `pending_bpkb`
+
+**Layout:**
+```
+┌──────────────────────────────────────┐
+│  CollapsibleTopAppBar               │
+│  MABPKB                     [🔔] [⋯]│
+│  Scan Dokumen BPKB                   │
+│                                      │
+│  ┌──────────────────────────────────┐│
+│  │  42 / 150 BPKB                  ││  ← angka besar Poppins-Bold
+│  │  ████████████░░░░░░░░░  28%     ││  ← progress bar animated fill
+│  │  Target bulan ini tercapai      ││  ← subtitle kecil
+│  └──────────────────────────────────┘│
+│                                      │
+│  ┌──────────────┐ ┌──────────────┐   │
+│  │   ✓  42      │ │   ○  108     │   │  ← 2 card: Selesai & Pending
+│  │   Selesai    │ │   Pending    │   │
+│  └──────────────┘ └──────────────┘   │
+│                                      │
+│  ┌──────────────────────────────────┐│
+│  │        📷  Mulai Scan BPKB      ││  ← CTA full-width → tab camera
+│  └──────────────────────────────────┘│
+└──────────────────────────────────────┘
+```
+
+**Keputusan:**
+- Progress bar sebagai hero element, animated fill dari 0% ke actual% saat mount
+- 2 card (Selesai + Pending), bukan 3 — target sudah di progress bar
+- Pending card: warna accent (biru) kalau > 0 → admin langsung tahu
+- CTA "Mulai Scan": full-width, primary color, navigasi ke tab camera
+- Pull-to-refresh di ScrollView
+- CollapsibleTopAppBar: title collapse saat scroll
+- **PRIORITAS TINGGI — UI/UX utama**
+
+### TrackStatusScreen — Redesign
+
+**Data source:** SSE `useBpkbStream` + `trackBpkb` (polling fallback)
+
+**Layout:**
+```
+┌──────────────────────────────────────┐
+│  ← Status Proses                 🔄  │  ← CollapsibleTopAppBar + refresh
+│                                      │
+│  Track ID: a1b2c3d4-e5f6...         │
+│                                      │
+│  ┌──────────────────────────────────┐│
+│  │  ●──  Queued             ✓      ││  ← hijau, checkmark
+│  │  │    10:00:30                   ││
+│  │  ●──  Create PDF         ← aktif││  ← biru, pulsing dot
+│  │  │    sedang diproses...         ││
+│  │  ○──  Update Stok Unit   menunggu││  ← abu-abu
+│  │  │                               ││
+│  │  ○──  Selesai            menunggu││  ← abu-abu
+│  └──────────────────────────────────┘│
+│                                      │
+│  ┌──────────────────────────────────┐│
+│  │        📄  Buka PDF              ││  ← muncul saat completed
+│  └──────────────────────────────────┘│
+│                                      │
+│  ┌──────────────────────────────────┐│
+│  │  ⚠  Error: Connection failed... ││  ← muncul saat failed
+│  └──────────────────────────────────┘│
+└──────────────────────────────────────┘
+```
+
+**Keputusan:**
+- Stepper vertical 4 tahap: queued → create_pdf → update_stok_unit → completed
+- Warna: hijau (selesai), biru aktif (pulsing), abu-abu (menunggu), merah (failed)
+- Garis penghubung antar step — hijau kalau sudah lewat
+- "Buka PDF" button: hanya muncul saat completed, buka URL di browser
+- Error card merah: hanya muncul saat failed
+- CollapsibleTopAppBar: title "Status Proses", action icon refresh
+- Input Track ID tetap manual (admin simpan track_id dari response submit)
+- **PRIORITAS TINGGI — UI/UX utama**
+
+### API Endpoint Baru
+
+- `GET /api/activity` → `target_bpkb`, `completed_bpkb`, `pending_bpkb`
+- Perlu tambah `getActivity()` di `endpoints.ts`
+- Response: `{ target_bpkb: number, completed_bpkb: number, pending_bpkb: number }`
+
+### Camera Flow — Pedal-Driven Industrial (2026-07-08)
+
+**Konteks:** Perusahaan menyediakan Bluetooth shutter kaki + tripod tinggi. Admin jarang memegang HP. Saat ini pakai external keyboard → tombol Volume Up sebagai trigger.
+
+**Package baru:**
+- `react-native-volume-manager` — listen hardware Volume Up key event
+- `react-native-sound` — play audio feedback
+
+**File struktur:**
+```
+src/
+├── hooks/
+│   ├── useVolumeKey.ts      (listen Volume Up, return callback)
+│   ├── useSound.ts          (play/stop sound.mp3)
+│   └── useBpkbStream.ts     (sudah ada)
+├── components/
+│   ├── ScanStepIndicator.tsx (progress ①②③④ di atas layar)
+│   └── ScanFeedback.tsx     (✓ besar hijau, ✕ besar merah, hasil OCR/BC)
+├── screens/scan/
+│   ├── ScanStep1Screen.tsx   (foto halaman 1 — pedal → kamera → auto-next)
+│   ├── ScanStep2Screen.tsx   (foto halaman 2 — pedal → kamera → auto-next)
+│   ├── ScanStep3Screen.tsx   (foto halaman 3 — pedal → kamera → OCR → auto-next)
+│   ├── ScanStep4Screen.tsx   (foto barcode — pedal → kamera → scan → auto-submit)
+│   └── ReviewScreen.tsx      (edge case only — manual edit sebelum kirim)
+```
+
+**Flow utama (4x pedal, 0x touch):**
+```
+[1/4] "Tekan tombol untuk foto" → pedal → kamera → foto → ✓ beep → auto-next (1 detik)
+[2/4] "Tekan tombol untuk foto" → pedal → kamera → foto → ✓ beep → auto-next
+[3/4] "Tekan tombol untuk foto" → pedal → kamera → foto → OCR → "JFP1E2714484" beep → auto-next
+[4/4] "Tekan tombol untuk foto" → pedal → kamera → foto → scan → "BPKB-2026-001" beep → auto-submit
+                                                                              ↓
+                                                                        ✓✓✓ beep beep beep
+```
+
+**Flow error (pause + manual):**
+```
+[3/4] pedal → foto → OCR gagal → 2x beep → "Ketik No Mesin" besar
+      Admin ke HP → ketik → Enter → beep → auto-next
+```
+
+**Trigger:** Volume Up dari external keyboard/bluetooth shutter
+**Sound:** `src/assets/audio/sound.mp3`
+**Feedback:** ✓ hijau besar (success), ✕ merah besar (error), hasil OCR/BC besar di tengah
+
+**Keputusan penting:**
+- ReviewScreen TIDAK dipakai di flow utama — hanya edge case (edit manual)
+- Auto-submit setelah foto 4 kalau semua data berhasil
+- Double-confirm untuk submit: 1x press = tampilkan ringkasan, 2x press dalam 3 detik = kirim
+- Auto-reset ke step 1 setelah submit berhasil (3 detik delay)
+- Auto-reset ke step 1 setelah 2 menit idle (cegah stuck)
+
+**Anti-error (skala industri):**
+- Validasi foto tidak blur/gelap sebelum lanjut
+- OCR result ditampilkan 2 detik sebelum auto-next (admin bisa lihat)
+- Barcode result ditampilkan 2 detik sebelum auto-submit
+- Sound pattern: 1 beep = success, 2 beep cepat = error, 3 beep naik = submit berhasil

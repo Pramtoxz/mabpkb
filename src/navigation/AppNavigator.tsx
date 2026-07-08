@@ -3,6 +3,7 @@ import {View, StyleSheet} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import LiquidGlassTabBar from '../components/LiquidGlassTabBar';
 import {HomeIcon, CameraIcon, BatchIcon} from '../components/TabIcons';
+import {TabNavProvider} from '../contexts/TabNavContext';
 import HomeStack from './HomeStack';
 import ScanStack from './ScanStack';
 import BatchStack from './BatchStack';
@@ -25,7 +26,7 @@ export default function AppNavigator() {
     {
       key: 'home',
       icon: <HomeIcon color={Colors.neutral} />,
-      iconActive: <HomeIcon color={Colors.primary} />,
+      iconActive: <HomeIcon color={Colors.onPrimary} />,
       onPress: () => setActiveTab(0),
     },
     {
@@ -37,7 +38,7 @@ export default function AppNavigator() {
     {
       key: 'batch',
       icon: <BatchIcon color={Colors.neutral} />,
-      iconActive: <BatchIcon color={Colors.primary} />,
+      iconActive: <BatchIcon color={Colors.onPrimary} />,
       onPress: () => setActiveTab(2),
     },
   ];
@@ -46,10 +47,12 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer>
-      <View style={styles.screenContainer}>
-        <ActiveScreen />
-      </View>
-      <LiquidGlassTabBar tabs={tabs} activeIndex={activeTab} />
+      <TabNavProvider value={{activeTab, setActiveTab}}>
+        <View style={styles.screenContainer}>
+          <ActiveScreen />
+        </View>
+        <LiquidGlassTabBar tabs={tabs} activeIndex={activeTab} hidden={activeTab === 1} />
+      </TabNavProvider>
     </NavigationContainer>
   );
 }

@@ -1,16 +1,19 @@
 import React, {useState} from 'react';
-import {View, Text, TextInput, TouchableOpacity, Image, ScrollView, StyleSheet, Alert, ActivityIndicator} from 'react-native';
+import {View, Text, TextInput, TouchableOpacity, Image, ScrollView, StyleSheet, ActivityIndicator} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ScanStackParamList} from '../../navigation/types';
 import {Colors, Fonts} from '../../constants';
 import {useScan} from '../../contexts/ScanContext';
+import {useAlert} from '../../contexts/AlertContext';
+import {showErrorToast} from '../../utils/toast';
 import {processBpkb} from '../../api';
 
 type Props = NativeStackScreenProps<ScanStackParamList, 'Review'>;
 
 export default function ReviewScreen({navigation}: Props) {
   const {state, setNobpkb, resetScan} = useScan();
+  const {showAlert} = useAlert();
   const insets = useSafeAreaInsets();
   const [nobpkbInput, setNobpkbInput] = useState(state.nobpkb);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,11 +21,11 @@ export default function ReviewScreen({navigation}: Props) {
   const handleSubmit = async () => {
     const nobpkb = nobpkbInput.trim();
     if (!nobpkb) {
-      Alert.alert('Error', 'No BPKB harus diisi.');
+      showErrorToast('No BPKB harus diisi.');
       return;
     }
     if (!state.photo1 || !state.photo2 || !state.photo3 || !state.photo4) {
-      Alert.alert('Error', 'Semua foto harus diambil.');
+      showErrorToast('Semua foto harus diambil.');
       return;
     }
 
@@ -37,31 +40,26 @@ export default function ReviewScreen({navigation}: Props) {
         state.photo4,
       ]);
 
-      Alert.alert(
-        'Berhasil',
-        `BPKB sedang diproses.\nTrack ID: ${result.track_id}`,
-        [
-          {
-            text: 'Lacak Status',
-            onPress: () => {
-              resetScan();
-              navigation.getParent()?.navigate('BatchTab', {screen: 'TrackStatus', params: {trackId: result.track_id}});
-            },
-          },
-          {
-            text: 'Scan Lagi',
-            onPress: () => {
-              resetScan();
-              navigation.getParent()?.navigate('ScanTab', {screen: 'ScanIdentity'});
-            },
-          },
-        ],
-      );
+      showAlert({
+        title: 'Berhasil',
+        message: `BPKB sedang diproses.\nTrack ID: ${result.track_id}`,
+        type: 'success',
+        confirmText: 'Lacak Status',
+        cancelText: 'Scan Lagi',
+        onConfirm: () => {
+          resetScan();
+          navigation.getParent()?.navigate('BatchTab', {screen: 'TrackStatus', params: {trackId: result.track_id}});
+        },
+        onCancel: () => {
+          resetScan();
+          navigation.getParent()?.navigate('ScanTab', {screen: 'ScanStep1'});
+        },
+      });
     } catch (error: any) {
       const message = error?.data?.errors
         ? Object.values(error.data.errors).flat().join('\n')
         : error?.data?.message || 'Terjadi kesalahan.';
-      Alert.alert('Gagal', message);
+      showErrorToast(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -70,7 +68,7 @@ export default function ReviewScreen({navigation}: Props) {
   const photos = [state.photo1, state.photo2, state.photo3, state.photo4];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={[styles.content, {paddingBottom: 100 + insets.bottom}]}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, {paddingBottom: 24 + insets.bottom}]}>
       <Text style={styles.title}>Review Data</Text>
 
       <View style={styles.section}>

@@ -60,3 +60,13 @@ export function processBpkb(nomesin: string, nobpkb: string, images: BpkbImage[]
 export function trackBpkb(trackId: string) {
   return apiRequest<BpkbTrackResponse>(`/api/bpkb/track/${trackId}`);
 }
+
+export interface ActivityResponse {
+  target_bpkb: number;
+  completed_bpkb: number;
+  pending_bpkb: number;
+}
+
+export function getActivity() {
+  return apiRequest<ActivityResponse>('/api/activity');
+}
