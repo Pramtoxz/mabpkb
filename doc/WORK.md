@@ -1,5 +1,232 @@
 > Setiap sesi wajib baca file ini sebelum mulai kerja.
 
+## KAMERA: KEPUTUSAN FINAL (2026-07-28, sore)
+
+**Semua eksperimen VisionCamera + OpenCV DIBATALKAN dan sudah dicopot.**
+Arsitektur final: `react-native-camera-kit` + `PedalCamera` untuk semua 5 step.
+
+### Alur final (5 step, semua dipedal, 0 sentuh layar)
+
+| Step | Layar | Isi | Hasil |
+|------|-------|-----|-------|
+| 1 | ScanStep1Screen | pedal → foto | photo1 |
+| 2 | ScanStep2Screen | pedal → foto | photo2 |
+| 3 | ScanStep3Screen | pedal → foto | photo3 |
+| 4 | ScanStep4Screen | pedal → foto → ML Kit OCR → `getDealer` | photo4 + nomesin + dealer |
+| 5 | ScanStep5Screen | pedal → foto → ML Kit barcode → submit | nobpkb → `processBpkb` |
+
+Step 1-3 memakai komponen bersama `src/components/PhotoCaptureStep.tsx` (jangan
+duplikasi kode per step). Step 4 & 5 punya logika sendiri karena ada OCR/barcode.
+
+Volume Bawah = jepret (via `PedalContext`). Volume Atas = ulang.
+
+### ATURAN WAJIB: setiap pemulihan error harus bisa lewat PEDAL
+
+Pedal hanya mengirim **Volume Bawah**. Volume Atas mengharuskan admin menyentuh HP,
+padahal kedua tangannya memegang BPKB dan HP ada di tripod. Jadi setiap jalan keluar
+dari kondisi gagal WAJIB terpasang di `volumeDown`. Kalau menaruhnya di `volumeUp`,
+alurnya buntu di lapangan meskipun lolos di meja developer.
+
+Pemetaan tombol saat ini:
+
+| Layar | Fase | Volume Bawah (pedal) | Volume Atas |
+|-------|------|----------------------|-------------|
+| Step 1-3 | camera | jepret | — |
+| Step 1-3 | done | — | ulang |
+| Step 4 | camera | jepret | — |
+| Step 4 | error | **foto ulang** | — |
+| Step 4 | result | — | ulang |
+| Step 5 | camera | jepret | — |
+| Step 5 | confirm | **KIRIM** | ulang |
+| Step 5 | scanError | **foto ulang** | — |
+| Step 5 | submitError | **kirim ulang** | foto ulang |
+
+### BUG KRITIS YANG SUDAH DIPERBAIKI di Step 5
+
+Versi lama: barcode terbaca → timer 1,5 detik memanggil `handleDoublePress` (tekan ke-1)
+→ fase `confirm` → menunggu tekan ke-2. Tapi **tidak ada `useHardwareKey` untuk
+`volumeDown` sama sekali** di layar itu — satu-satunya yang terpasang adalah
+`handleRetake` di `volumeUp`. Akibatnya `doSubmit` MUSTAHIL tercapai lewat pedal dan
+data tidak pernah terkirim. Setelah 3 detik fase kembali ke `result` dan buntu.
+
+Sekarang: barcode terbaca → langsung fase `confirm` yang menampilkan ringkasan
+(No BPKB + No Mesin + Dealer) → satu tekan pedal = KIRIM. Mekanisme `pressCount` dan
+timer 3 detik dibuang karena membingungkan dan jadi sumber bug. Fase gagal kirim
+dipisah (`submitError`) dari gagal baca barcode (`scanError`) supaya pedal bisa
+mengulang tindakan yang tepat: kirim ulang, bukan foto ulang.
+
+### No Mesin: DIVERIFIKASI KE DATABASE, bukan ditebak regex
+
+**Nomor mesin selalu diawali `JM`.** Contoh nyata: `JMF2E1774885` (JM + 3 karakter + 7 digit).
+
+Regex lama `/[A-Z0-9]{8,16}/` mengambil kecocokan PERTAMA apa saja, sehingga menangkap
+`DITLANTAS` dari teks BPKB lalu melaporkan "berhasil" dengan nomor yang salah.
+
+Cara sekarang (`src/utils/noMesin.ts` + `ScanStep4Screen`):
+
+1. Kumpulkan kandidat dari ML Kit per-elemen, per-baris, dan regex `JM[A-Z0-9]{6,15}`
+   (menangkap kasus OCR memisah nomor dengan spasi)
+2. Buang yang tidak masuk akal: panjang di luar 8-17, atau tidak mengandung huruf DAN angka
+   (aturan ini yang membunuh `DITLANTAS`)
+3. Urutkan: prefix `JM` +6, bentuk mesin +4, deret digit panjang +2, panjang 11-13 +2
+4. Tambah varian perbaikan salah baca digit di EKOR saja (O→0, I→1, S→5, B→8, D→0, dst),
+   5 karakter pertama tidak diutak-atik supaya prefix aman
+5. **Adu setiap kandidat ke `getDealer()` sampai ada yang dijawab database.** Yang dijawab
+   itulah nomor mesin yang benar — terbukti, bukan tebakan. Maksimal 8 percobaan.
+
+`JM` dipakai sebagai PRIORITAS URUTAN, bukan penyaring mati — kalau suatu saat ada nomor
+tanpa prefix JM, tetap ketemu, hanya dicoba belakangan. Database yang jadi hakim.
+
+Penting: `getDealer` membedakan 3 keadaan dan ketiganya HARUS dibedakan —
+mengembalikan objek (nomor valid), `null` (tidak ada di DB), atau melempar (jaringan gagal).
+Jangan pernah `catch {}` kosong di sini seperti kode lama, karena gagal jaringan akan
+disalahartikan sebagai "nomor tidak ditemukan".
+
+Kalau tidak ada kandidat yang lolos, layar masuk mode input manual dengan kandidat terbaik
+sudah terisi (admin tinggal mengoreksi, bukan mengetik dari nol), dan input manual pun
+tetap diverifikasi ke database sebelum diterima.
+
+Regresi dijaga `__tests__/noMesin.test.ts` (4 kasus, lulus semua). Jalankan: `npx jest`.
+`@react-native/jest-preset` tadinya belum terpasang sehingga jest tidak bisa jalan sama
+sekali — sekarang sudah.
+
+### DILARANG (sudah dicoba dan gagal / tidak sepadan)
+
+1. **`@dariyd/react-native-document-scanner` atau ML Kit Document Scanner apapun.**
+   Membuka Activity milik Google Play Services → `dispatchKeyEvent` di `MainActivity.kt`
+   tidak menjangkaunya dan tidak ada API shutter programatik → **pedal mustahil**.
+   ML Kit yang BOLEH hanya `@react-native-ml-kit/text-recognition` dan
+   `@react-native-ml-kit/barcode-scanning` — keduanya jalan di FILE gambar hasil
+   jepretan, bukan UI sendiri.
+2. **`@shopify/react-native-skia`.** Gagal compile di mesin Windows ini: 18 langkah
+   compile dilaporkan sukses tapi hanya 1 file `.o` bertahan saat link.
+3. **VisionCamera v5 + fast-opencv untuk deteksi tepi live.** Berfungsi sampai tahap
+   barcode terdeteksi, tapi menuntut minSdk 26, 6 package native, dan pemetaan
+   koordinat yang belum tuntas. Dibatalkan karena PDF dibuat server, bukan app —
+   jadi auto-crop bukan tugas app dan deteksi live tidak sepadan biayanya.
+
+### Konsekuensi yang diterima
+
+Bingkai TIDAK mengikuti dokumen. `DocumentOverlay.tsx` adalah bingkai statis sebagai
+panduan. Admin mengepaskan BPKB dengan berpatokan pada bingkai statis itu.
+
+### Kondisi Android
+
+- `minSdkVersion` kembali **24**
+- `AndroidManifest.xml` tetap `android:screenOrientation="portrait"` (HP di tripod,
+  tidak boleh berputar)
+- `MainActivity.kt` `dispatchKeyEvent` **tetap dipakai** — ini inti pedal, jangan diutak-atik
+- `react-native-volume-manager` masih terpasang tapi **tidak dipakai sama sekali**
+  (`useVolumeKey.ts` sudah dihapus). Aman dicopot kapan saja.
+
+### BELUM TERVERIFIKASI
+
+- Belum dibuild ulang setelah penyederhanaan ini — **wajib rebuild native** karena ada
+  package native yang dicopot dan minSdk berubah
+- **Ukuran file hasil `camera-kit.capture()` belum diukur.** `API.md` mensyaratkan
+  maksimal 1048KB per gambar dan tepat 4 gambar. camera-kit tidak memberi kontrol
+  resolusi/kualitas seperti VisionCamera, jadi ini RISIKO NYATA — kalau lebih dari 1MB,
+  upload akan kena 422 dan perlu kompresi sebelum kirim.
+- Antrean offline SQLite (`flow.md`) belum ada. `ScanStep5` memanggil `processBpkb`
+  langsung; kalau gagal hanya toast dan data hilang.
+
+### Catatan build di mesin ini
+
+- `npx react-native run-android` gagal: `'gradlew.bat' is not recognized`.
+  Pakai: `cd android` lalu `.\gradlew.bat installDebug`, Metro dijalankan terpisah.
+- Build native penuh ~12 menit
+
+---
+
+## RIWAYAT: eksperimen VisionCamera (2026-07-28, siang) — SUDAH DIBATALKAN
+
+### Masalah yang ditemukan
+
+`@dariyd/react-native-document-scanner` (dipakai ScanStep1-3 di commit `36f0e7c`) memanggil
+**ML Kit Document Scanner**, yaitu Activity milik Google Play Services. Akibatnya:
+
+- `dispatchKeyEvent` di `MainActivity.kt` TIDAK menjangkau Activity itu
+- ML Kit Document Scanner tidak punya API shutter programatik
+- Kesimpulan: **pedal mustahil di jalur ini**, admin wajib menyentuh HP
+
+`DocumentOverlay.tsx` juga bukan deteksi tepi — itu bingkai statis dengan border pulsing.
+
+### Kondisi pemakaian sebenarnya (dari user, 2026-07-28)
+
+- HP di tripod, **sejajar kepala admin** — layar DILIHAT terus
+- Kedua tangan admin memegang buku BPKB
+- Kaki menekan pedal → pedal mengirim **Volume Bawah** ke HP
+- Orientasi **portrait**, dikunci di manifest
+
+Deteksi tepi karena itu BUKAN kosmetik — itu loop kontrol: mata lihat layar → tangan geser
+BPKB → kaki tekan pedal saat posisi sudah pas. Barcode juga harus terdeteksi live agar
+posisinya bisa dipaskan sebelum jepret.
+
+### Stack kamera (terpasang)
+
+| Package | Versi | Alasan |
+|---------|-------|--------|
+| `react-native-vision-camera` | 5.2.0 | Preview DI DALAM app → `dispatchKeyEvent` tetap jalan. `capturePhotoToFile()` programatik untuk pedal. `targetResolution`+`quality` memenuhi syarat max 1048KB di API.md |
+| `react-native-nitro-modules` / `-image` | 0.36.3 / 0.15.1 | Wajib oleh VisionCamera v5 |
+| `react-native-vision-camera-worklets` | 5.2.0 | Frame processor (`useFrameOutput`) |
+| `react-native-vision-camera-resizer` | 5.2.0 | Downscale GPU ke 320x180, `scaleMode: 'stretch'` |
+| `react-native-vision-camera-barcode-scanner` | 5.2.0 | Barcode live (ML Kit) + `cornerPoints` |
+| `react-native-fast-opencv` | 1.0.0 | Deteksi tepi dokumen (Canny + findContours + approxPolyDP) |
+
+**Skia DIBUANG.** `@shopify/react-native-skia` gagal compile di mesin Windows ini (object
+file `.o` hilang saat link, 18 compile dilaporkan sukses tapi cuma 1 file bertahan).
+Skia hanya dipakai untuk menggambar garis — diganti `react-native-svg` yang sudah ada.
+JANGAN pasang ulang Skia.
+
+### Pipeline koordinat (PENTING — jangan tebak rotasi)
+
+Ada API resmi untuk konversi koordinat, tidak perlu menebak rotasi/cermin:
+
+```
+buffer 320x180 (OpenCV)
+  -> skala ke frame:  x * (frame.width / 320), y * (frame.height / 180)
+  -> frame.convertFramePointToCameraPoint(point)      // di worklet
+  -> previewView.convertCameraPointToViewPoint(point) // di JS, via CameraRef
+  -> koordinat view untuk <Polygon> react-native-svg
+```
+
+Barcode: `barcodeScanner.scanCodes(frame)` dipanggil di frame processor yang SAMA, jadi
+`cornerPoints` sudah dalam ruang frame → masuk pipeline yang sama dari langkah 2.
+
+`scaleMode: 'stretch'` dipilih agar buffer→frame adalah skala murni tanpa letterbox.
+`convertCameraPointToViewPoint` throw kalau preview belum siap → wajib try/catch.
+
+### Perubahan konfigurasi Android
+
+- `android/build.gradle`: `minSdkVersion = 24` → **26** (dituntut `vision-camera-resizer`).
+  `tools:overrideLibrary` TIDAK dipakai karena dokumentasinya sendiri memperingatkan
+  "may lead to runtime failures".
+- `AndroidManifest.xml`: tambah `android:screenOrientation="portrait"` — pemetaan koordinat
+  bergantung orientasi, kalau layar berputar bingkai jadi kacau.
+
+### File PoC
+
+- `src/vision/detectDocumentQuad.ts` — worklet deteksi quad
+- `src/components/DocumentScanCamera.tsx` — Camera + frame processor + overlay SVG + capture
+- `src/screens/scan/ScanPocScreen.tsx` — layar uji, mode Dokumen/Barcode bisa diganti
+
+`ScanStack` sementara `initialRouteName="ScanPoc"` — **WAJIB dibalikkan ke ScanStep1**
+setelah PoC selesai.
+
+### BELUM TERVERIFIKASI (jangan klaim beres)
+
+- Belum pernah berhasil build & jalan di device sama sekali
+- Ketepatan bingkai hijau menempel di BPKB belum pernah dilihat
+- Ukuran file hasil `capturePhotoToFile` belum diukur terhadap batas 1048KB
+- Keandalan deteksi tepi tergantung kontras BPKB vs alas — **alas gelap sangat dianjurkan**,
+  alas terang membuat deteksi meleset/kedip. Ini faktor fisik, bukan kode.
+
+### Catatan build di mesin ini
+
+- `npx react-native run-android` gagal: `'gradlew.bat' is not recognized`. Bypass:
+  `cd android; .\gradlew.bat installDebug` + `npx react-native start` terpisah
+- Build native penuh ~12 menit
+
 ## STATUS TERKINI (2026-07-08 10:56)
 
 ### Sudah Selesai

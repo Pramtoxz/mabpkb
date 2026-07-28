@@ -1,5 +1,12 @@
 import React, {useCallback, useRef, useState} from 'react';
-import {View, Text, TextInput, StyleSheet, ActivityIndicator} from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  ActivityIndicator,
+  Pressable,
+} from 'react-native';
 import BarcodeScanning from '@react-native-ml-kit/barcode-scanning';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
@@ -7,7 +14,6 @@ import type {ScanStackParamList} from '../../navigation/types';
 import {Colors, Fonts} from '../../constants';
 import {useScan, type ScanImage} from '../../contexts/ScanContext';
 import {useAlert} from '../../contexts/AlertContext';
-import {showErrorToast} from '../../utils/toast';
 import {useSound} from '../../hooks/useSound';
 import {useHardwareKey} from '../../hooks/useHardwareKey';
 import {processBpkb} from '../../api';
@@ -16,9 +22,13 @@ import PedalCamera from '../../components/PedalCamera';
 import {CheckIcon, XIcon} from '../../components/TabIcons';
 
 type Props = NativeStackScreenProps<ScanStackParamList, 'ScanStep5'>;
-type Phase = 'camera' | 'scanning' | 'result' | 'error' | 'confirm' | 'submitting';
-
-const DOUBLE_PRESS_WINDOW = 3000;
+type Phase =
+  | 'camera'
+  | 'scanning'
+  | 'confirm'
+  | 'submitting'
+  | 'scanError'
+  | 'submitError';
 
 export default function ScanStep5Screen({navigation}: Props) {
   const insets = useSafeAreaInsets();
@@ -28,118 +38,127 @@ export default function ScanStep5Screen({navigation}: Props) {
   const [phase, setPhase] = useState<Phase>('camera');
   const [resultText, setResultText] = useState('');
   const [manualInput, setManualInput] = useState('');
-  const [, setPressCount] = useState(0);
-  const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [errorText, setErrorText] = useState('');
+  const isSubmittingRef = useRef(false);
 
-  const doSubmit = useCallback(async () => {
-    if (!state.photo1 || !state.photo2 || !state.photo3 || !state.photo4) {
-      showErrorToast('Foto belum lengkap.');
-      return;
-    }
-    if (!state.nobpkb) {
-      showErrorToast('No BPKB belum diisi.');
-      return;
-    }
-
-    setPhase('submitting');
-    try {
-      const result = await processBpkb(state.nomesin, state.nobpkb, [
-        state.photo1, state.photo2, state.photo3, state.photo4,
-      ]);
-
-      play('submit');
-      showAlert({
-        title: 'Berhasil',
-        message: `BPKB sedang diproses.\nTrack ID: ${result.track_id}`,
-        type: 'success',
-        confirmText: 'Lacak Status',
-        cancelText: 'Scan Lagi',
-        onConfirm: () => {
-          resetScan();
-          navigation.getParent()?.navigate('BatchTab', {screen: 'TrackStatus', params: {trackId: result.track_id}});
-        },
-        onCancel: () => {
-          resetScan();
-          navigation.getParent()?.navigate('ScanTab', {screen: 'ScanStep1'});
-        },
-      });
-      setPhase('result');
-    } catch (error: any) {
-      const message = error?.data?.errors
-        ? Object.values(error.data.errors).flat().join('\n')
-        : error?.data?.message || 'Terjadi kesalahan.';
-      play('error');
-      showErrorToast(message);
-      setPhase('error');
-    }
-  }, [navigation, play, resetScan, showAlert, state]);
-
-  const handleDoublePress = useCallback(() => {
-    setPressCount(prev => {
-      const next = prev + 1;
-      if (next === 1) {
-        setPhase('confirm');
-        if (confirmTimerRef.current) {clearTimeout(confirmTimerRef.current);}
-        confirmTimerRef.current = setTimeout(() => {
-          setPressCount(0);
-          setPhase('result');
-        }, DOUBLE_PRESS_WINDOW);
+  const doSubmit = useCallback(
+    async (nobpkb: string) => {
+      if (isSubmittingRef.current) {
+        return;
       }
-      if (next >= 2) {
-        if (confirmTimerRef.current) {clearTimeout(confirmTimerRef.current);}
-        setPressCount(0);
-        doSubmit();
-      }
-      return next;
-    });
-  }, [doSubmit]);
-
-  const handleCapture = useCallback(async (img: ScanImage) => {
-    setPhase('scanning');
-
-    try {
-      const barcodes = await BarcodeScanning.scan(img.uri);
-
-      if (barcodes.length > 0) {
-        const barcodeValue = barcodes[0].value || '';
-        setNobpkb(barcodeValue);
-        setResultText(barcodeValue);
-        play('success');
-        setPhase('result');
-        pressTimerRef.current = setTimeout(() => handleDoublePress(), 1500);
-      } else {
+      if (!state.photo1 || !state.photo2 || !state.photo3 || !state.photo4) {
+        setErrorText('Foto belum lengkap. Ulangi scan dari awal.');
         play('error');
-        setPhase('error');
+        setPhase('submitError');
+        return;
       }
-    } catch {
-      play('error');
-      setPhase('error');
-    }
-  }, [handleDoublePress, play, setNobpkb]);
+
+      isSubmittingRef.current = true;
+      setPhase('submitting');
+      try {
+        const result = await processBpkb(state.nomesin, nobpkb, [
+          state.photo1,
+          state.photo2,
+          state.photo3,
+          state.photo4,
+        ]);
+
+        play('submit');
+        showAlert({
+          title: 'Berhasil',
+          message: `BPKB sedang diproses.\nTrack ID: ${result.track_id}`,
+          type: 'success',
+          confirmText: 'Lacak Status',
+          cancelText: 'Scan Lagi',
+          onConfirm: () => {
+            resetScan();
+            navigation.getParent()?.navigate('BatchTab', {
+              screen: 'TrackStatus',
+              params: {trackId: result.track_id},
+            });
+          },
+          onCancel: () => {
+            resetScan();
+            navigation.getParent()?.navigate('ScanTab', {screen: 'ScanStep1'});
+          },
+        });
+      } catch (error: any) {
+        const message = error?.data?.errors
+          ? Object.values(error.data.errors).flat().join('\n')
+          : error?.data?.message || 'Gagal mengirim ke server.';
+        setErrorText(message);
+        play('error');
+        setPhase('submitError');
+      } finally {
+        isSubmittingRef.current = false;
+      }
+    },
+    [navigation, play, resetScan, showAlert, state],
+  );
+
+  const handleCapture = useCallback(
+    async (img: ScanImage) => {
+      setPhase('scanning');
+
+      try {
+        const barcodes = await BarcodeScanning.scan(img.uri);
+        const value = barcodes[0]?.value;
+
+        if (value) {
+          setNobpkb(value);
+          setResultText(value);
+          play('success');
+          setPhase('confirm');
+        } else {
+          setErrorText('Barcode tidak terdeteksi');
+          play('error');
+          setPhase('scanError');
+        }
+      } catch {
+        setErrorText('Gagal memindai barcode');
+        play('error');
+        setPhase('scanError');
+      }
+    },
+    [play, setNobpkb],
+  );
 
   const handleManualSubmit = useCallback(() => {
     const trimmed = manualInput.trim();
-    if (!trimmed) {return;}
+    if (!trimmed) {
+      return;
+    }
     setNobpkb(trimmed);
     setResultText(trimmed);
     play('success');
-    setPhase('result');
-    pressTimerRef.current = setTimeout(() => handleDoublePress(), 1000);
-  }, [handleDoublePress, manualInput, play, setNobpkb]);
+    setPhase('confirm');
+  }, [manualInput, play, setNobpkb]);
 
   const handleRetake = useCallback(() => {
-    if (pressTimerRef.current) {clearTimeout(pressTimerRef.current);}
-    if (confirmTimerRef.current) {clearTimeout(confirmTimerRef.current);}
-    setPressCount(0);
     setResultText('');
     setManualInput('');
+    setErrorText('');
     setPhase('camera');
   }, []);
 
+  const handleSend = useCallback(() => {
+    doSubmit(resultText);
+  }, [doSubmit, resultText]);
+
+  const handleRetrySubmit = useCallback(() => {
+    if (resultText) {
+      doSubmit(resultText);
+    } else {
+      handleRetake();
+    }
+  }, [doSubmit, handleRetake, resultText]);
+
+  useHardwareKey(handleSend, phase === 'confirm', 'volumeDown');
+  useHardwareKey(handleRetake, phase === 'scanError', 'volumeDown');
+  useHardwareKey(handleRetrySubmit, phase === 'submitError', 'volumeDown');
   useHardwareKey(
     handleRetake,
-    phase === 'result' || phase === 'error' || phase === 'confirm',
+    phase === 'confirm' || phase === 'submitError',
     'volumeUp',
   );
 
@@ -149,23 +168,30 @@ export default function ScanStep5Screen({navigation}: Props) {
 
       <View style={styles.cameraArea}>
         {phase === 'camera' && (
-          <PedalCamera filename="barcode.jpg" onCapture={handleCapture} overlayVariant="barcode" />
+          <PedalCamera
+            filename="barcode.jpg"
+            onCapture={handleCapture}
+            overlayVariant="barcode"
+          />
         )}
         {phase === 'scanning' && (
           <View style={styles.processingCard}>
+            <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={styles.processingText}>Memindai barcode...</Text>
           </View>
         )}
-        {(phase === 'result' || phase === 'confirm') && (
+        {phase === 'confirm' && (
           <View style={styles.doneCard}>
-            <CheckIcon size={56} color="#16a34a" />
+            <CheckIcon size={48} color="#16a34a" />
             <Text style={styles.resultValue}>{resultText}</Text>
-          </View>
-        )}
-        {phase === 'error' && (
-          <View style={styles.errorCard}>
-            <XIcon size={56} color={Colors.destructive} />
-            <Text style={styles.errorText}>Barcode tidak terdeteksi</Text>
+            <View style={styles.summary}>
+              <Text style={styles.summaryLine}>
+                No Mesin: {state.nomesin || '-'}
+              </Text>
+              <Text style={styles.summaryLine}>
+                Dealer: {state.dealer?.nm_dealer ?? '-'}
+              </Text>
+            </View>
           </View>
         )}
         {phase === 'submitting' && (
@@ -174,15 +200,15 @@ export default function ScanStep5Screen({navigation}: Props) {
             <Text style={styles.processingText}>Mengirim...</Text>
           </View>
         )}
+        {(phase === 'scanError' || phase === 'submitError') && (
+          <View style={styles.errorCard}>
+            <XIcon size={48} color={Colors.destructive} />
+            <Text style={styles.errorText}>{errorText}</Text>
+          </View>
+        )}
       </View>
 
-      {phase === 'confirm' && (
-        <View style={styles.confirmCard}>
-          <Text style={styles.confirmText}>Tekan sekali lagi untuk kirim</Text>
-        </View>
-      )}
-
-      {phase === 'error' && (
+      {phase === 'scanError' && (
         <View style={styles.manualSection}>
           <Text style={styles.manualLabel}>Masukkan No BPKB manual:</Text>
           <View style={styles.inputRow}>
@@ -195,9 +221,9 @@ export default function ScanStep5Screen({navigation}: Props) {
               autoCapitalize="characters"
               autoCorrect={false}
             />
-            <View style={styles.submitBtn}>
-              <Text style={styles.submitBtnText} onPress={handleManualSubmit}>OK</Text>
-            </View>
+            <Pressable style={styles.submitBtn} onPress={handleManualSubmit}>
+              <Text style={styles.submitBtnText}>OK</Text>
+            </Pressable>
           </View>
         </View>
       )}
@@ -205,10 +231,15 @@ export default function ScanStep5Screen({navigation}: Props) {
       <View style={styles.hintCard}>
         <Text style={styles.hintTitle}>Foto Barcode BPKB</Text>
         <Text style={styles.hintDesc}>
-          {phase === 'camera' ? 'Tekan pedal (Volume Bawah) untuk foto' :
-           phase === 'confirm' ? 'Tekan pedal sekali lagi untuk kirim' :
-           phase === 'error' ? 'Tekan Volume Atas untuk ulang' :
-           'Memproses...'}
+          {phase === 'camera'
+            ? 'Tekan pedal (Volume Bawah) untuk foto'
+            : phase === 'confirm'
+            ? 'Tekan pedal untuk KIRIM, Volume Atas untuk ulang'
+            : phase === 'scanError'
+            ? 'Tekan pedal untuk foto ulang, atau isi manual lalu OK'
+            : phase === 'submitError'
+            ? 'Tekan pedal untuk kirim ulang, Volume Atas untuk foto ulang'
+            : 'Memproses...'}
         </Text>
       </View>
     </View>
@@ -251,13 +282,23 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#16a34a',
     gap: 8,
+    paddingHorizontal: 16,
   },
   resultValue: {
     fontFamily: Fonts.heading.bold,
     fontSize: 24,
     color: '#16a34a',
     textAlign: 'center',
-    paddingHorizontal: 16,
+  },
+  summary: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  summaryLine: {
+    fontFamily: Fonts.body.medium,
+    fontSize: 14,
+    color: '#15803d',
+    textAlign: 'center',
   },
   errorCard: {
     flex: 1,
@@ -268,27 +309,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Colors.destructive,
     gap: 8,
+    paddingHorizontal: 16,
   },
   errorText: {
     fontFamily: Fonts.heading.semiBold,
     fontSize: 16,
     color: Colors.destructive,
     textAlign: 'center',
-    paddingHorizontal: 16,
-  },
-  confirmCard: {
-    backgroundColor: '#fef3c7',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#f59e0b',
-    marginBottom: 12,
-  },
-  confirmText: {
-    fontFamily: Fonts.heading.semiBold,
-    fontSize: 14,
-    color: '#92400e',
   },
   manualSection: {
     marginBottom: 12,

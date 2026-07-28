@@ -1,4 +1,4 @@
-import React, {useRef, useState, useEffect} from 'react';
+import React, {useRef, useState, useEffect, useCallback} from 'react';
 import {View, StyleSheet, PermissionsAndroid, Platform} from 'react-native';
 import {Camera, CameraType} from 'react-native-camera-kit';
 import type {CameraApi} from 'react-native-camera-kit';
@@ -17,79 +17,72 @@ interface PedalCameraProps {
   overlayVariant?: OverlayVariant;
 }
 
-export default function PedalCamera({filename, onCapture, overlayVariant = 'document'}: PedalCameraProps) {
+const FEEDBACK_DURATION_MS = 1200;
+
+export default function PedalCamera({
+  filename,
+  onCapture,
+  overlayVariant = 'document',
+}: PedalCameraProps) {
   const cameraRef = useRef<CameraApi>(null);
   const {play} = useSound();
-  const [feedback, setFeedback] = useState<{type: 'success' | 'error'; msg: string} | null>(null);
+  const {register, unregister} = usePedal();
+  const [feedback, setFeedback] = useState<{
+    type: 'success' | 'error';
+    msg: string;
+  } | null>(null);
   const [hasPermission, setHasPermission] = useState(false);
   const isCapturingRef = useRef(false);
 
   useEffect(() => {
-    console.log('[PedalCamera] mounted — requesting permission');
     if (Platform.OS !== 'android') {
       setHasPermission(true);
       return;
     }
-    PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA).then(result => {
-      console.log('[PedalCamera] permission result:', result);
-      setHasPermission(result === PermissionsAndroid.RESULTS.GRANTED);
-    });
+    PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA).then(
+      result => setHasPermission(result === PermissionsAndroid.RESULTS.GRANTED),
+    );
   }, []);
 
-  useEffect(() => {
-    console.log('[PedalCamera] hasPermission:', hasPermission);
-  }, [hasPermission]);
-
-  const handleCapture = async () => {
-    console.log('[PedalCamera] handleCapture called — isCapturing:', isCapturingRef.current, 'hasPermission:', hasPermission, 'cameraRef:', !!cameraRef.current);
-    if (isCapturingRef.current || !cameraRef.current || !hasPermission) {
-      console.log('[PedalCamera] capture skipped');
+  const handleCapture = useCallback(async () => {
+    if (isCapturingRef.current || !cameraRef.current) {
       return;
     }
     isCapturingRef.current = true;
 
     try {
-      console.log('[PedalCamera] calling camera.capture()');
       const image = await cameraRef.current.capture();
-      console.log('[PedalCamera] capture success:', image.uri);
-
-      const img: ScanImage = {
-        uri: image.uri,
-        type: 'image/jpeg',
-        name: filename,
-      };
 
       play('success');
       setFeedback({type: 'success', msg: 'Foto tersimpan'});
-      onCapture(img);
+      onCapture({uri: image.uri, type: 'image/jpeg', name: filename});
 
       setTimeout(() => {
         setFeedback(null);
         isCapturingRef.current = false;
-      }, 1200);
-    } catch (e) {
-      console.log('[PedalCamera] capture error:', e);
+      }, FEEDBACK_DURATION_MS);
+    } catch {
       play('error');
       setFeedback({type: 'error', msg: 'Gagal mengambil foto'});
       isCapturingRef.current = false;
     }
-  };
+  }, [filename, onCapture, play]);
 
-  const {register, unregister} = usePedal();
+  const captureRef = useRef(handleCapture);
+  captureRef.current = handleCapture;
 
   useEffect(() => {
-    if (hasPermission) {
-      register(handleCapture);
+    if (!hasPermission) {
+      return;
     }
+    register(() => captureRef.current());
     return () => unregister();
-  }, [hasPermission]);
+  }, [hasPermission, register, unregister]);
 
   if (!hasPermission) {
-    console.log('[PedalCamera] rendering empty — no permission');
     return <View style={styles.container} />;
   }
 
-  console.log('[PedalCamera] rendering camera');
   return (
     <View style={styles.container}>
       <Camera
@@ -100,9 +93,7 @@ export default function PedalCamera({filename, onCapture, overlayVariant = 'docu
         focusMode="on"
         shutterPhotoSound={false}
       />
-      {overlayVariant !== 'none' && (
-        <DocumentOverlay variant={overlayVariant} />
-      )}
+      {overlayVariant !== 'none' && <DocumentOverlay variant={overlayVariant} />}
       <ScanFeedback
         type={feedback?.type ?? 'success'}
         message={feedback?.msg ?? ''}

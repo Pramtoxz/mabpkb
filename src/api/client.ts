@@ -25,19 +25,34 @@ export async function apiRequest<T>(
     requestHeaders['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(`${Config.API_BASE_URL}${endpoint}`, {
-    method,
-    headers: requestHeaders,
-    body,
-  });
+  const fullUrl = `${Config.API_BASE_URL}${endpoint}`;
+  console.log('[API] URL:', fullUrl);
+  console.log('[API] SECRET_KEY:', Config.SECRET_KEY);
+
+  let response: Response;
+  try {
+    response = await fetch(fullUrl, {
+      method,
+      headers: requestHeaders,
+      body,
+    });
+  } catch (err) {
+    console.log('[API] NETWORK ERROR:', err);
+    throw err;
+  }
+
+  console.log('[API] STATUS:', response.status);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => null);
+    console.log('[API] ERROR DATA:', errorData);
     throw {
       status: response.status,
       data: errorData,
     };
   }
 
-  return response.json();
+  const data = await response.json();
+  console.log('[API] SUCCESS:', data);
+  return data;
 }
