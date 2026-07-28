@@ -9,6 +9,7 @@ export type ScanStackParamList = {
   ScanStep2: undefined;
   ScanStep3: undefined;
   ScanStep4: undefined;
+  ScanStep5: undefined;
   Review: undefined;
 };
 

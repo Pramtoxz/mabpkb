@@ -1,111 +1,54 @@
 import React, {useCallback, useRef, useState} from 'react';
-import {View, Text, TextInput, StyleSheet, ActivityIndicator} from 'react-native';
-import BarcodeScanning from '@react-native-ml-kit/barcode-scanning';
+import {View, Text, TextInput, StyleSheet} from 'react-native';
+import TextRecognition from '@react-native-ml-kit/text-recognition';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ScanStackParamList} from '../../navigation/types';
 import {Colors, Fonts} from '../../constants';
 import {useScan, type ScanImage} from '../../contexts/ScanContext';
-import {useAlert} from '../../contexts/AlertContext';
-import {showErrorToast} from '../../utils/toast';
 import {useSound} from '../../hooks/useSound';
-import {processBpkb} from '../../api';
+import {useHardwareKey} from '../../hooks/useHardwareKey';
+import {CheckIcon, XIcon} from '../../components/TabIcons';
+import {getDealer} from '../../api';
 import ScanStepIndicator from '../../components/ScanStepIndicator';
 import PedalCamera from '../../components/PedalCamera';
-import {CheckIcon, XIcon} from '../../components/TabIcons';
+import ScanFeedback from '../../components/ScanFeedback';
 
 type Props = NativeStackScreenProps<ScanStackParamList, 'ScanStep4'>;
+type Phase = 'camera' | 'ocr' | 'result' | 'error';
 
-const DOUBLE_PRESS_WINDOW = 3000;
+const NO_MESIN_REGEX = /[A-Z0-9]{8,16}/;
 
 export default function ScanStep4Screen({navigation}: Props) {
   const insets = useSafeAreaInsets();
-  const {state, setPhoto4, setNobpkb, resetScan} = useScan();
-  const {showAlert} = useAlert();
+  const {setPhoto4, setNomesin, setDealer} = useScan();
   const {play} = useSound();
-  const [phase, setPhase] = useState<'camera' | 'scanning' | 'result' | 'error' | 'confirm' | 'submitting'>('camera');
+  const [phase, setPhase] = useState<Phase>('camera');
   const [resultText, setResultText] = useState('');
   const [manualInput, setManualInput] = useState('');
-  const [, setPressCount] = useState(0);
-  const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const doSubmit = useCallback(async () => {
-    if (!state.photo1 || !state.photo2 || !state.photo3 || !state.photo4) {
-      showErrorToast('Foto belum lengkap.');
-      return;
-    }
-    if (!state.nobpkb) {
-      showErrorToast('No BPKB belum diisi.');
-      return;
-    }
-
-    setPhase('submitting');
-    try {
-      const result = await processBpkb(state.nomesin, state.nobpkb, [
-        state.photo1, state.photo2, state.photo3, state.photo4,
-      ]);
-
-      play('submit');
-      showAlert({
-        title: 'Berhasil',
-        message: `BPKB sedang diproses.\nTrack ID: ${result.track_id}`,
-        type: 'success',
-        confirmText: 'Lacak Status',
-        cancelText: 'Scan Lagi',
-        onConfirm: () => {
-          resetScan();
-          navigation.getParent()?.navigate('BatchTab', {screen: 'TrackStatus', params: {trackId: result.track_id}});
-        },
-        onCancel: () => {
-          resetScan();
-          navigation.getParent()?.navigate('ScanTab', {screen: 'ScanStep1'});
-        },
-      });
-      setPhase('result');
-    } catch (error: any) {
-      const message = error?.data?.errors
-        ? Object.values(error.data.errors).flat().join('\n')
-        : error?.data?.message || 'Terjadi kesalahan.';
-      play('error');
-      showErrorToast(message);
-      setPhase('error');
-    }
-  }, [navigation, play, resetScan, showAlert, state]);
-
-  const handleDoublePress = useCallback(() => {
-    setPressCount(prev => {
-      const next = prev + 1;
-      if (next === 1) {
-        setPhase('confirm');
-        if (pressTimerRef.current) {clearTimeout(pressTimerRef.current);}
-        pressTimerRef.current = setTimeout(() => {
-          setPressCount(0);
-          setPhase('result');
-        }, DOUBLE_PRESS_WINDOW);
-      }
-      if (next >= 2) {
-        if (pressTimerRef.current) {clearTimeout(pressTimerRef.current);}
-        setPressCount(0);
-        doSubmit();
-      }
-      return next;
-    });
-  }, [doSubmit]);
+  const nextTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleCapture = useCallback(async (img: ScanImage) => {
-    setPhoto4(img);
-    setPhase('scanning');
+    setPhase('ocr');
 
     try {
-      const barcodes = await BarcodeScanning.scan(img.uri);
+      const result = await TextRecognition.recognize(img.uri);
+      const match = result.text.match(NO_MESIN_REGEX);
 
-      if (barcodes.length > 0) {
-        const barcodeValue = barcodes[0].value || '';
-        setNobpkb(barcodeValue);
-        setResultText(barcodeValue);
+      if (match) {
+        const nomesin = match[0];
+        setPhoto4(img);
+        setNomesin(nomesin);
+        setResultText(nomesin);
         play('success');
         setPhase('result');
-        setTimeout(() => handleDoublePress(), 1500);
+
+        try {
+          const dealer = await getDealer(nomesin);
+          if (dealer) {setDealer(dealer);}
+        } catch {}
+
+        nextTimerRef.current = setTimeout(() => navigation.navigate('ScanStep5'), 2000);
       } else {
         play('error');
         setPhase('error');
@@ -114,32 +57,47 @@ export default function ScanStep4Screen({navigation}: Props) {
       play('error');
       setPhase('error');
     }
-  }, [handleDoublePress, play, setNobpkb, setPhoto4]);
+  }, [navigation, play, setDealer, setNomesin, setPhoto4]);
 
-  const handleManualSubmit = useCallback(() => {
-    const trimmed = manualInput.trim();
+  const handleManualSubmit = useCallback(async () => {
+    const trimmed = manualInput.trim().toUpperCase();
     if (!trimmed) {return;}
-    setNobpkb(trimmed);
+    setNomesin(trimmed);
     setResultText(trimmed);
     play('success');
     setPhase('result');
-    setTimeout(() => handleDoublePress(), 1000);
-  }, [handleDoublePress, manualInput, play, setNobpkb]);
+
+    try {
+      const dealer = await getDealer(trimmed);
+      if (dealer) {setDealer(dealer);}
+    } catch {}
+
+    nextTimerRef.current = setTimeout(() => navigation.navigate('ScanStep5'), 1500);
+  }, [manualInput, navigation, play, setDealer, setNomesin]);
+
+  const handleRetake = useCallback(() => {
+    if (nextTimerRef.current) {clearTimeout(nextTimerRef.current);}
+    setResultText('');
+    setManualInput('');
+    setPhase('camera');
+  }, []);
+
+  useHardwareKey(handleRetake, phase === 'error' || phase === 'result', 'volumeUp');
 
   return (
     <View style={[styles.container, {paddingBottom: 24 + insets.bottom}]}>
-      <ScanStepIndicator currentStep={4} totalSteps={4} />
+      <ScanStepIndicator currentStep={4} totalSteps={5} />
 
       <View style={styles.cameraArea}>
         {phase === 'camera' && (
-          <PedalCamera filename="barcode.jpg" onCapture={handleCapture} />
+          <PedalCamera filename="nomesin.jpg" onCapture={handleCapture} />
         )}
-        {phase === 'scanning' && (
+        {phase === 'ocr' && (
           <View style={styles.processingCard}>
-            <Text style={styles.processingText}>Memindai barcode...</Text>
+            <Text style={styles.processingText}>Memproses OCR...</Text>
           </View>
         )}
-        {(phase === 'result' || phase === 'confirm') && (
+        {phase === 'result' && (
           <View style={styles.doneCard}>
             <CheckIcon size={56} color="#16a34a" />
             <Text style={styles.resultValue}>{resultText}</Text>
@@ -148,30 +106,18 @@ export default function ScanStep4Screen({navigation}: Props) {
         {phase === 'error' && (
           <View style={styles.errorCard}>
             <XIcon size={56} color={Colors.destructive} />
-            <Text style={styles.errorText}>Barcode tidak terdeteksi</Text>
-          </View>
-        )}
-        {phase === 'submitting' && (
-          <View style={styles.processingCard}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.processingText}>Mengirim...</Text>
+            <Text style={styles.errorText}>No Mesin tidak ditemukan</Text>
           </View>
         )}
       </View>
 
-      {phase === 'confirm' && (
-        <View style={styles.confirmCard}>
-          <Text style={styles.confirmText}>Tekan sekali lagi untuk kirim</Text>
-        </View>
-      )}
-
       {phase === 'error' && (
         <View style={styles.manualSection}>
-          <Text style={styles.manualLabel}>Masukkan No BPKB manual:</Text>
+          <Text style={styles.manualLabel}>Masukkan No Mesin manual:</Text>
           <View style={styles.inputRow}>
             <TextInput
               style={styles.input}
-              placeholder="Contoh: BPKB-2026-001"
+              placeholder="Contoh: JFP1E2714484"
               placeholderTextColor={Colors.border}
               value={manualInput}
               onChangeText={setManualInput}
@@ -186,13 +132,19 @@ export default function ScanStep4Screen({navigation}: Props) {
       )}
 
       <View style={styles.hintCard}>
-        <Text style={styles.hintTitle}>Foto Barcode BPKB</Text>
+        <Text style={styles.hintTitle}>Foto No Mesin</Text>
         <Text style={styles.hintDesc}>
-          {phase === 'camera' ? 'Tekan tombol Volume Up atau pedal untuk foto' :
-           phase === 'confirm' ? 'Tekan pedal sekali lagi untuk kirim' :
+          {phase === 'camera' ? 'Tekan pedal (Volume Bawah) untuk foto' :
+           phase === 'error' ? 'Tekan Volume Atas untuk ulang' :
            'Memproses...'}
         </Text>
       </View>
+
+      <ScanFeedback
+        type={phase === 'error' ? 'error' : 'result'}
+        message={resultText}
+        visible={phase === 'result'}
+      />
     </View>
   );
 }
@@ -217,7 +169,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: Colors.primary,
-    gap: 12,
   },
   processingText: {
     fontFamily: Fonts.heading.semiBold,
@@ -236,10 +187,8 @@ const styles = StyleSheet.create({
   },
   resultValue: {
     fontFamily: Fonts.heading.bold,
-    fontSize: 24,
+    fontSize: 28,
     color: '#16a34a',
-    textAlign: 'center',
-    paddingHorizontal: 16,
   },
   errorCard: {
     flex: 1,
@@ -253,24 +202,8 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontFamily: Fonts.heading.semiBold,
-    fontSize: 16,
+    fontSize: 18,
     color: Colors.destructive,
-    textAlign: 'center',
-    paddingHorizontal: 16,
-  },
-  confirmCard: {
-    backgroundColor: '#fef3c7',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#f59e0b',
-    marginBottom: 12,
-  },
-  confirmText: {
-    fontFamily: Fonts.heading.semiBold,
-    fontSize: 14,
-    color: '#92400e',
   },
   manualSection: {
     marginBottom: 12,
