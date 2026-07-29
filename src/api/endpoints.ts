@@ -1,4 +1,4 @@
-import {apiRequest} from './client';
+import { apiRequest } from './client';
 
 export interface DealerData {
   fk_dealer: string;
@@ -38,7 +38,11 @@ export interface BpkbImage {
   name: string;
 }
 
-export function processBpkb(nomesin: string, nobpkb: string, images: BpkbImage[]) {
+export function processBpkb(
+  nomesin: string,
+  nobpkb: string,
+  images: BpkbImage[],
+) {
   const formData = new FormData();
   formData.append('nomesin', nomesin);
   formData.append('nobpkb', nobpkb);

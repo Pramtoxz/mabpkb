@@ -29,16 +29,22 @@ export async function apiRequest<T>(
   console.log('[API] URL:', fullUrl);
   console.log('[API] SECRET_KEY:', Config.SECRET_KEY);
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
   let response: Response;
   try {
     response = await fetch(fullUrl, {
       method,
       headers: requestHeaders,
       body,
+      signal: controller.signal,
     });
   } catch (err) {
     console.log('[API] NETWORK ERROR:', err);
     throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   console.log('[API] STATUS:', response.status);
