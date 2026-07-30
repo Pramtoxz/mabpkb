@@ -18,7 +18,7 @@ export default function ScanStep1Screen({navigation}: Props) {
     <PhotoCaptureStep
       step={1}
       totalSteps={5}
-      title="Foto Halaman 1"
+      title="Identitas Pemilik"
       filename="hal1.jpg"
       onCaptured={setPhoto1}
       onNext={handleNext}

@@ -10,7 +10,6 @@ export type ScanStackParamList = {
   ScanStep3: undefined;
   ScanStep4: undefined;
   ScanStep5: undefined;
-  Review: undefined;
 };
 
 export type BatchStackParamList = {

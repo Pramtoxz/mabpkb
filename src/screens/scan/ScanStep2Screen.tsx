@@ -18,7 +18,7 @@ export default function ScanStep2Screen({navigation}: Props) {
     <PhotoCaptureStep
       step={2}
       totalSteps={5}
-      title="Foto Halaman 2"
+      title="Identitas Kendaraan"
       filename="hal2.jpg"
       onCaptured={setPhoto2}
       onNext={handleNext}

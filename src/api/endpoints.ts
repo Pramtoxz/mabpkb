@@ -45,7 +45,7 @@ export async function processBpkb(
   images: BpkbImage[],
 ) {
   const compressed = await Promise.all(
-    images.map(img => compressImage(img.uri, img.name)),
+    images.map(img => compressImage(img.uri, img.name, 1)),
   );
 
   const formData = new FormData();

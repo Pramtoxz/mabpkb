@@ -7,39 +7,57 @@ import {
   ActivityIndicator,
   Pressable,
 } from 'react-native';
-import BarcodeScanning from '@react-native-ml-kit/barcode-scanning';
+import {
+  Camera,
+  useCameraDevice,
+  useCameraPermission,
+  useCodeScanner,
+} from 'react-native-vision-camera';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ScanStackParamList} from '../../navigation/types';
 import {Colors, Fonts} from '../../constants';
-import {useScan, type ScanImage} from '../../contexts/ScanContext';
+import {useScan} from '../../contexts/ScanContext';
 import {useAlert} from '../../contexts/AlertContext';
 import {useSound} from '../../hooks/useSound';
 import {useHardwareKey} from '../../hooks/useHardwareKey';
 import {processBpkb} from '../../api';
 import ScanStepIndicator from '../../components/ScanStepIndicator';
-import PedalCamera from '../../components/PedalCamera';
+import DocumentOverlay from '../../components/DocumentOverlay';
 import {CheckIcon, XIcon} from '../../components/TabIcons';
 
 type Props = NativeStackScreenProps<ScanStackParamList, 'ScanStep5'>;
-type Phase =
-  | 'camera'
-  | 'scanning'
-  | 'confirm'
-  | 'submitting'
-  | 'scanError'
-  | 'submitError';
+type Phase = 'scanning' | 'confirm' | 'submitting' | 'submitError';
+
+const CODE_TYPES = [
+  'qr',
+  'code-128',
+  'code-39',
+  'ean-13',
+  'pdf-417',
+  'data-matrix',
+  'aztec',
+] as const;
 
 export default function ScanStep5Screen({navigation}: Props) {
   const insets = useSafeAreaInsets();
   const {state, setNobpkb, resetScan} = useScan();
   const {showAlert} = useAlert();
   const {play} = useSound();
-  const [phase, setPhase] = useState<Phase>('camera');
+  const device = useCameraDevice('back');
+  const {hasPermission, requestPermission} = useCameraPermission();
+  const [phase, setPhase] = useState<Phase>('scanning');
   const [resultText, setResultText] = useState('');
   const [manualInput, setManualInput] = useState('');
   const [errorText, setErrorText] = useState('');
   const isSubmittingRef = useRef(false);
+  const hasScannedRef = useRef(false);
+
+  React.useEffect(() => {
+    if (!hasPermission) {
+      requestPermission();
+    }
+  }, [hasPermission, requestPermission]);
 
   const doSubmit = useCallback(
     async (nobpkb: string) => {
@@ -96,49 +114,46 @@ export default function ScanStep5Screen({navigation}: Props) {
     [navigation, play, resetScan, showAlert, state],
   );
 
-  const handleCapture = useCallback(
-    async (img: ScanImage) => {
-      setPhase('scanning');
-
-      try {
-        const barcodes = await BarcodeScanning.scan(img.uri);
-        const value = barcodes[0]?.value;
-
-        if (value) {
-          setNobpkb(value);
-          setResultText(value);
-          play('success');
-          setPhase('confirm');
-        } else {
-          setErrorText('Barcode tidak terdeteksi');
-          play('error');
-          setPhase('scanError');
-        }
-      } catch {
-        setErrorText('Gagal memindai barcode');
-        play('error');
-        setPhase('scanError');
-      }
+  const acceptNobpkb = useCallback(
+    (value: string) => {
+      setNobpkb(value);
+      setResultText(value);
+      play('success');
+      setPhase('confirm');
     },
     [play, setNobpkb],
   );
+
+  const codeScanner = useCodeScanner({
+    codeTypes: [...CODE_TYPES],
+    onCodeScanned: codes => {
+      if (hasScannedRef.current) {
+        return;
+      }
+      const value = codes[0]?.value;
+      if (!value) {
+        return;
+      }
+      hasScannedRef.current = true;
+      acceptNobpkb(value);
+    },
+  });
 
   const handleManualSubmit = useCallback(() => {
     const trimmed = manualInput.trim();
     if (!trimmed) {
       return;
     }
-    setNobpkb(trimmed);
-    setResultText(trimmed);
-    play('success');
-    setPhase('confirm');
-  }, [manualInput, play, setNobpkb]);
+    hasScannedRef.current = true;
+    acceptNobpkb(trimmed);
+  }, [acceptNobpkb, manualInput]);
 
   const handleRetake = useCallback(() => {
+    hasScannedRef.current = false;
     setResultText('');
     setManualInput('');
     setErrorText('');
-    setPhase('camera');
+    setPhase('scanning');
   }, []);
 
   const handleSend = useCallback(() => {
@@ -154,7 +169,6 @@ export default function ScanStep5Screen({navigation}: Props) {
   }, [doSubmit, handleRetake, resultText]);
 
   useHardwareKey(handleSend, phase === 'confirm', 'volumeDown');
-  useHardwareKey(handleRetake, phase === 'scanError', 'volumeDown');
   useHardwareKey(handleRetrySubmit, phase === 'submitError', 'volumeDown');
   useHardwareKey(
     handleRetake,
@@ -167,18 +181,16 @@ export default function ScanStep5Screen({navigation}: Props) {
       <ScanStepIndicator currentStep={5} totalSteps={5} />
 
       <View style={styles.cameraArea}>
-        {phase === 'camera' && (
-          <PedalCamera
-            filename="barcode.jpg"
-            onCapture={handleCapture}
-            overlayVariant="barcode"
-          />
-        )}
-        {phase === 'scanning' && (
-          <View style={styles.processingCard}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.processingText}>Memindai barcode...</Text>
-          </View>
+        {phase === 'scanning' && hasPermission && device != null && (
+          <>
+            <Camera
+              style={StyleSheet.absoluteFill}
+              device={device}
+              isActive={phase === 'scanning'}
+              codeScanner={codeScanner}
+            />
+            <DocumentOverlay variant="barcode" />
+          </>
         )}
         {phase === 'confirm' && (
           <View style={styles.doneCard}>
@@ -200,7 +212,7 @@ export default function ScanStep5Screen({navigation}: Props) {
             <Text style={styles.processingText}>Mengirim...</Text>
           </View>
         )}
-        {(phase === 'scanError' || phase === 'submitError') && (
+        {phase === 'submitError' && (
           <View style={styles.errorCard}>
             <XIcon size={48} color={Colors.destructive} />
             <Text style={styles.errorText}>{errorText}</Text>
@@ -208,9 +220,9 @@ export default function ScanStep5Screen({navigation}: Props) {
         )}
       </View>
 
-      {phase === 'scanError' && (
+      {phase === 'scanning' && (
         <View style={styles.manualSection}>
-          <Text style={styles.manualLabel}>Masukkan No BPKB manual:</Text>
+          <Text style={styles.manualLabel}>Atau masukkan No BPKB manual:</Text>
           <View style={styles.inputRow}>
             <TextInput
               style={styles.input}
@@ -229,16 +241,14 @@ export default function ScanStep5Screen({navigation}: Props) {
       )}
 
       <View style={styles.hintCard}>
-        <Text style={styles.hintTitle}>Foto Barcode BPKB</Text>
+        <Text style={styles.hintTitle}>Barcode</Text>
         <Text style={styles.hintDesc}>
-          {phase === 'camera'
-            ? 'Tekan pedal (Volume Bawah) untuk foto'
+          {phase === 'scanning'
+            ? 'Arahkan kamera ke barcode BPKB'
             : phase === 'confirm'
             ? 'Tekan pedal untuk KIRIM, Volume Atas untuk ulang'
-            : phase === 'scanError'
-            ? 'Tekan pedal untuk foto ulang, atau isi manual lalu OK'
             : phase === 'submitError'
-            ? 'Tekan pedal untuk kirim ulang, Volume Atas untuk foto ulang'
+            ? 'Tekan pedal untuk kirim ulang, Volume Atas untuk ulang scan'
             : 'Memproses...'}
         </Text>
       </View>

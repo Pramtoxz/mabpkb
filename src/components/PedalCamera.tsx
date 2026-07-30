@@ -1,13 +1,17 @@
 import React, {useRef, useState, useEffect, useCallback} from 'react';
-import {View, StyleSheet, PermissionsAndroid, Platform} from 'react-native';
-import {Camera, CameraType} from 'react-native-camera-kit';
-import type {CameraApi} from 'react-native-camera-kit';
+import {View, StyleSheet} from 'react-native';
+import {
+  Camera,
+  useCameraDevice,
+  useCameraPermission,
+} from 'react-native-vision-camera';
 import {usePedal} from '../contexts/PedalContext';
 import {useSound} from '../hooks/useSound';
 import type {ScanImage} from '../contexts/ScanContext';
 import ScanFeedback from './ScanFeedback';
 import DocumentOverlay from './DocumentOverlay';
 import {Colors} from '../constants';
+import {processScanImage} from '../utils/documentScanner';
 
 type OverlayVariant = 'document' | 'barcode' | 'none';
 
@@ -24,25 +28,22 @@ export default function PedalCamera({
   onCapture,
   overlayVariant = 'document',
 }: PedalCameraProps) {
-  const cameraRef = useRef<CameraApi>(null);
+  const cameraRef = useRef<Camera>(null);
+  const device = useCameraDevice('back');
+  const {hasPermission, requestPermission} = useCameraPermission();
   const {play} = useSound();
   const {register, unregister} = usePedal();
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error';
     msg: string;
   } | null>(null);
-  const [hasPermission, setHasPermission] = useState(false);
   const isCapturingRef = useRef(false);
 
   useEffect(() => {
-    if (Platform.OS !== 'android') {
-      setHasPermission(true);
-      return;
+    if (!hasPermission) {
+      requestPermission();
     }
-    PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA).then(
-      result => setHasPermission(result === PermissionsAndroid.RESULTS.GRANTED),
-    );
-  }, []);
+  }, [hasPermission, requestPermission]);
 
   const handleCapture = useCallback(async () => {
     if (isCapturingRef.current || !cameraRef.current) {
@@ -51,11 +52,25 @@ export default function PedalCamera({
     isCapturingRef.current = true;
 
     try {
-      const image = await cameraRef.current.capture();
+      const photo = await cameraRef.current.takePhoto({
+        flash: 'off',
+        enableShutterSound: false,
+      });
+
+      const scanResult = await processScanImage(`file://${photo.path}`);
 
       play('success');
-      setFeedback({type: 'success', msg: 'Foto tersimpan'});
-      onCapture({uri: image.uri, type: 'image/jpeg', name: filename});
+      setFeedback({
+        type: 'success',
+        msg: scanResult.borderDetected
+          ? 'Foto tersimpan'
+          : 'Foto tersimpan (border tidak terdeteksi)',
+      });
+      onCapture({
+        uri: scanResult.uri,
+        type: 'image/jpeg',
+        name: filename,
+      });
 
       setTimeout(() => {
         setFeedback(null);
@@ -72,14 +87,14 @@ export default function PedalCamera({
   captureRef.current = handleCapture;
 
   useEffect(() => {
-    if (!hasPermission) {
+    if (!hasPermission || device == null) {
       return;
     }
     register(() => captureRef.current());
     return () => unregister();
-  }, [hasPermission, register, unregister]);
+  }, [hasPermission, device, register, unregister]);
 
-  if (!hasPermission) {
+  if (!hasPermission || device == null) {
     return <View style={styles.container} />;
   }
 
@@ -88,10 +103,9 @@ export default function PedalCamera({
       <Camera
         ref={cameraRef}
         style={StyleSheet.absoluteFill}
-        cameraType={CameraType.Back}
-        flashMode="off"
-        focusMode="on"
-        shutterPhotoSound={false}
+        device={device}
+        isActive={true}
+        photo={true}
       />
       {overlayVariant !== 'none' && <DocumentOverlay variant={overlayVariant} />}
       <ScanFeedback
