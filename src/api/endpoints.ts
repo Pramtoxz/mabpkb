@@ -1,4 +1,5 @@
 import { apiRequest } from './client';
+import { compressImage } from '../utils/imageCompressor';
 
 export interface DealerData {
   fk_dealer: string;
@@ -38,15 +39,19 @@ export interface BpkbImage {
   name: string;
 }
 
-export function processBpkb(
+export async function processBpkb(
   nomesin: string,
   nobpkb: string,
   images: BpkbImage[],
 ) {
+  const compressed = await Promise.all(
+    images.map(img => compressImage(img.uri, img.name)),
+  );
+
   const formData = new FormData();
   formData.append('nomesin', nomesin);
   formData.append('nobpkb', nobpkb);
-  images.forEach((img, index) => {
+  compressed.forEach((img, index) => {
     formData.append(`images[${index + 1}]`, {
       uri: img.uri,
       type: img.type,
