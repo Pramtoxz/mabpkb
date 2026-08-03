@@ -2,8 +2,8 @@
 
 > Dokumen ini adalah sumber kebenaran tunggal (single source of truth) untuk AI coding agent yang mengerjakan project ini. Baca seluruh dokumen sebelum menulis kode apapun. Jangan berasumsi API atau library berdasarkan training data — lihat Bagian 4.
 
-**Status:** ✅ **Migrasi kode SUDAH SELESAI ditulis dan lolos verifikasi compile-time** (`tsc` bersih + `./gradlew assembleDebug` BUILD SUCCESSFUL, 30 Juli 2026). **❌ BELUM PERNAH DIJALANKAN/DITES DI DEVICE FISIK** — sesi yang mengerjakan ini tidak punya device/emulator terhubung sama sekali. **INI ACTION ITEM PALING PENTING untuk sesi berikutnya: colok HP, `npx react-native run-android`, uji step 1→5 sampai submit.** Detail lengkap apa yang berubah, apa yang belum teruji, dan langkah pengujian ada di **Bagian 11 — WAJIB DIBACA DULU** sebelum menyentuh file apapun.
-**Terakhir diverifikasi:** 30 Juli 2026 (sesi migrasi penuh — lihat Bagian 11 untuk status akhir & langkah selanjutnya).
+**Status:** ✅ **Migrasi kode SUDAH SELESAI ditulis dan lolos verifikasi compile-time** (`tsc` bersih + `./gradlew assembleDebug` BUILD SUCCESSFUL, 30 Juli 2026). ✅ **SUDAH DIJALANKAN DI DEVICE FISIK** (31 Juli 2026) — capture foto via volume-button jalan, OpenCV pipeline jalan (cvtColor → GaussianBlur → Canny → findContours), fallback ke foto asli berjalan normal saat contour tidak terdeteksi. **❌ BELUM selesai uji end-to-end** — OCR step 3, barcode step 5, dan upload submit belum dites. Detail lengkap di **Bagian 11 — WAJIB DIBACA DULU** sebelum menyentuh file apapun.
+**Terakhir diverifikasi:** 31 Juli 2026 (runtime device — capture + OpenCV pipeline, lihat Bagian 11 untuk status akhir & langkah selanjutnya).
 
 ---
 
@@ -39,6 +39,7 @@ Tujuan aplikasi: capture 4 gambar berkualitas scan (bukan foto biasa), ekstrak n
 | OCR nomor mesin (step 3)        | `@react-native-ml-kit/text-recognition`                                    | **1.5.2** (terpasang: `^2.0.0`, cek ulang saat instalasi) | Native module gaya lama, jalan lewat interop layer RN (bukan TurboModule native) — lihat catatan resiko di Bagian 4. Tidak terpengaruh pin vision-camera v4, library ini berdiri sendiri |
 | Volume button trigger           | Native module custom (Kotlin, override `dispatchKeyEvent` di MainActivity) | —                          | Tidak terpengaruh versi RN. Bluetooth shutter remote otomatis ke-cover karena secara hardware = tombol volume-down  |
 | HTTP client                     | fetch bawaan RN (`src/api/client.ts`)                                       | —                          | Sudah terimplementasi. Base URL & secret key dari `.env` via `react-native-config`, jangan hardcode                 |
+| File system access              | `react-native-fs`                                                           | **terpasang**              | Dipakai di `documentScanner.ts` untuk baca file foto sebagai base64 (`RNFS.readFile`). Menggantikan `fetch`+`FileReader` yang tidak reliable di RN. Autolinked, tidak perlu config manual |
 
 ### Kenapa pin vision-camera ke v4.7.2, bukan 5.2.0 terbaru (keputusan 30 Juli 2026)
 
@@ -225,9 +226,9 @@ Dokumen ini semula ditulis dengan asumsi "belum ada kode" — itu salah, lalu mi
 
 ### Ringkasan super singkat
 - Semua kode sudah ditulis, lolos `tsc` + `gradlew assembleDebug`.
-- **Belum pernah dijalankan di device fisik sama sekali** — tidak ada emulator/HP yang terhubung sepanjang sesi kemarin.
-- **Tugas #1 sesi ini: colok HP via USB (aktifkan USB debugging), jalankan `npx react-native start` + `npx react-native run-android` (atau build dari Android Studio), lalu susuri manual step 1 → step 5 → submit → layar tracking.**
-- Area paling berisiko meleset saat dites (urutan cek yang disarankan): (1) permission dialog kamera muncul & capture jalan di `PedalCamera.tsx`, (2) hasil crop `documentScanner.ts` masuk akal secara visual — bukan gambar rusak/area salah, (3) OCR+`getDealer` di step 3 masih akurat, (4) live barcode scan (`useCodeScanner`) di step 5 benar-benar mendeteksi barcode real, (5) upload akhir ke backend sukses dengan `images[]` yang benar.
+- ✅ **SUDAH dijalankan di device fisik** (31 Juli 2026) — capture foto + OpenCV pipeline jalan, 2 bug SIGSEGV ditemukan & diperbaiki.
+- **Tugas berikutnya: tes step 3 (OCR), step 5 (barcode), upload submit, layar tracking** — lihat "LANGKAH SELANJUTNYA" di bawah.
+- Area paling berisiko meleset saat dites (urutan cek yang disarankan): (1) ✅ ~~permission dialog kamera muncul & capture jalan~~ — SUDAH TES, (2) ✅ ~~OpenCV pipeline jalan tanpa crash~~ — SUDAH TES, (3) OCR+`getDealer` di step 3 masih akurat, (4) live barcode scan (`useCodeScanner`) di step 5 benar-benar mendeteksi barcode real, (5) upload akhir ke backend sukses dengan `images[]` yang benar.
 
 ### File yang sudah diubah sesi ini (state SEKARANG, bukan lagi rencana)
 
@@ -245,11 +246,11 @@ Dokumen ini semula ditulis dengan asumsi "belum ada kode" — itu salah, lalu mi
 | [src/screens/scan/ScanStep5Screen.tsx](src/screens/scan/ScanStep5Screen.tsx) | **DITULIS ULANG TOTAL** — barcode sekarang pakai `useCodeScanner` (vision-camera v4, live-scan langsung dari `<Camera codeScanner={...}>`), BUKAN lagi `@react-native-ml-kit/barcode-scanning` still-image. Input manual selalu tersedia (bukan cuma muncul setelah gagal). Titik submit final (`processBpkb`) tidak berubah lokasinya. |
 | [src/screens/scan/ReviewScreen.tsx](src/screens/scan/ReviewScreen.tsx) | **DIHAPUS** (dead code, tidak pernah dinavigasi). Referensinya juga sudah dibuang dari `ScanStack.tsx` dan `ScanStackParamList` di `types.ts`. |
 | [src/utils/noMesin.ts](src/utils/noMesin.ts) | **Tidak diubah**, cuma dipindah konteks pemanggilannya ke `ScanStep3Screen.tsx`. |
-| [src/utils/documentScanner.ts](src/utils/documentScanner.ts) | **FILE BARU.** Fungsi `processScanImage(uri)` — deteksi border + crop bounding-box + enhance kontras/brightness, pakai `react-native-fast-opencv`. Lihat peringatan API di bawah sebelum menyentuh file ini lebih lanjut. |
+| [src/utils/documentScanner.ts](src/utils/documentScanner.ts) | **FILE BARU.** Fungsi `processScanImage(uri)` — deteksi border + crop bounding-box + enhance kontras/brightness, pakai `react-native-fast-opencv`. **31 Juli 2026: 2 bug SIGSEGV ditemukan & diperbaiki** (lihat "Bug runtime ditemukan 31 Juli 2026" di bawah). Sekarang sudah jalan di device tanpa crash. `findContours` mengembalikan 0 kontur di tes → fallback ke foto asli berjalan normal. |
 | [src/utils/imageCompressor.ts](src/utils/imageCompressor.ts) | Tidak diubah. |
 | [src/api/endpoints.ts](src/api/endpoints.ts) | **Bug diperbaiki** — `compressImage(img.uri, img.name, 1)` sekarang eksplisit target 1MB (sebelumnya default 4.5MB tanpa override). |
 | `babel.config.js` | **Ditambah** `react-native-worklets-core/plugin` (untuk dependency vision-camera v4), berdampingan dengan `react-native-worklets/plugin` yang sudah ada. |
-| `package.json` | Ditambah: `react-native-vision-camera@^4.7.2`, `react-native-worklets-core@^1.6.3`, `react-native-fast-opencv@^1.0.0`. Dicopot: `react-native-camera-kit`, `@react-native-ml-kit/barcode-scanning`. |
+| `package.json` | Ditambah: `react-native-vision-camera@^4.7.2`, `react-native-worklets-core@^1.6.3`, `react-native-fast-opencv@^1.0.0`, `react-native-fs@^2.20.0`. Dicopot: `react-native-camera-kit`, `@react-native-ml-kit/barcode-scanning`. |
 
 ### Blast radius exact (snapshot SEBELUM migrasi, 30 Juli 2026 — untuk referensi historis; state SEKARANG ada di tabel "File yang sudah diubah sesi ini" di atas)
 
@@ -269,14 +270,15 @@ Pemanggil `<PedalCamera .../>` yang TIDAK PERNAH menyentuh `react-native-camera-
 
 ### Dependency check — riwayat (30 Juli 2026)
 
-Sebelum instalasi, dicek dulu: **tidak ada** `react-native-vision-camera`, `react-native-fast-opencv`, `react-native-worklets-core` yang terpasang sama sekali (langsung maupun transitif) — instalasi bersih, tidak ada konflik versi parsial. **Setelah sesi ini, ketiganya SUDAH terpasang** (lihat tabel `package.json` di atas) — kalau sesi baru menjalankan `npm install` dulu (misal setelah clone/pull), semua dependency ini akan otomatis terpasang dari `package.json`/`package-lock.json`, tidak perlu instal manual lagi. `@shopify/react-native-skia` sengaja TIDAK dipakai/diinstal (lihat alasan di bagian frame-processor di bawah).
+Sebelum instalasi, dicek dulu: **tidak ada** `react-native-vision-camera`, `react-native-fast-opencv`, `react-native-worklets-core`, `react-native-fs` yang terpasang sama sekali (langsung maupun transitif) — instalasi bersih, tidak ada konflik versi parsial. **Setelah sesi ini, keempatnya SUDAH terpasang** (lihat tabel `package.json` di atas) — kalau sesi baru menjalankan `npm install` dulu (misal setelah clone/pull), semua dependency ini akan otomatis terpasang dari `package.json`/`package-lock.json`, tidak perlu instal manual lagi. `@shopify/react-native-skia` sengaja TIDAK dipakai/diinstal (lihat alasan di bagian frame-processor di bawah).
 
-### Gotcha instalasi Android untuk vision-camera — SUDAH DIVERIFIKASI 30 Juli 2026
+### Gotcha instalasi Android untuk vision-camera & OpenCV — SUDAH DIVERIFIKASI 30–31 Juli 2026
 
 - `./gradlew assembleDebug` **BUILD SUCCESSFUL** setelah install `react-native-vision-camera@4.7.2` + `react-native-worklets-core@1.6.3` + babel plugin `react-native-worklets-core/plugin`. APK debug ter-generate normal.
 - Manifest hasil merge (`android/app/build/intermediates/merged_manifest/debug/processDebugMainManifest/AndroidManifest.xml`) dicek: **`RECORD_AUDIO` TIDAK ikut ditarik** oleh vision-camera 4.7.2 untuk penggunaan foto-saja (`photo={true}`, tanpa `video={true}`). Kekhawatiran sebelumnya tidak terbukti — tidak perlu `tools:node="remove"` atau `xmlns:tools`.
 - `npx tsc --noEmit` bersih setelah swap kamera (`PedalCamera.tsx`) dan barcode (`ScanStep5Screen.tsx` ke `useCodeScanner`).
-- **Catatan:** ini baru verifikasi COMPILE-TIME (native build + types). Belum ada verifikasi RUNTIME di device sungguhan (tidak ada device/emulator terhubung saat ini) — capture foto, permission dialog, dan live barcode scan tetap perlu dites manual di HP asli sebelum dianggap selesai.
+- ✅ **Runtime verified 31 Juli 2026:** capture foto jalan, OpenCV pipeline jalan (cvtColor → GaussianBlur → Canny → findContours), volume-button trigger jalan. **2 bug SIGSEGV ditemukan & diperbaiki** — lihat "Bug runtime ditemukan 31 Juli 2026" di bawah.
+- **Gotcha KRUSIAL `react-native-fast-opencv`:** `Mat.create()` tanpa argumen = null pointer, HARUS pre-alloc dengan `Mat.create(rows, cols, DataTypes.CV_8UC1)`. Ini TIDAK sama dengan OpenCV C++ standar yang auto-alloc dst. Berlaku untuk SEMUA fungsi dengan parameter dst Mat.
 
 ### Komponen pendukung yang dipakai scan flow — JANGAN diubah signature-nya, tinggal reuse
 
@@ -301,7 +303,30 @@ API asli versi 1.0.0 (dikonfirmasi dari `node_modules/react-native-fast-opencv/l
 
 Implementasi final ada di [src/utils/documentScanner.ts](src/utils/documentScanner.ts) — **sengaja disederhanakan jadi crop bounding-box** (bukan perspective-warp 4-titik penuh), karena fungsi-fungsi untuk perspective-warp (`getPerspectiveTransform`, `warpPerspective`, `PointVector` construction dari titik hasil `approxPolyDP`) butuh instance method chaining yang lebih kompleks dan belum bisa diverifikasi tanpa device asli. Fallback ke foto asli kalau contour tidak ditemukan atau OpenCV gagal — tidak pernah melempar error yang mem-block capture.
 
-**Status verifikasi:** lolos `npx tsc --noEmit` DAN `./gradlew assembleDebug` (BUILD SUCCESSFUL, native module `react-native-fast-opencv` ter-link dengan benar, dicek 30 Juli 2026). **BELUM diverifikasi runtime** — perilaku sesungguhnya dari `findContours`/`contourArea`/`boundingRect`/`crop`/`convertScaleAbs`/`saveToFile` pada foto asli baru bisa dipastikan setelah dites capture langsung di HP. Kalau hasil crop terlihat salah (misal area terpotong tidak masuk akal), cek dulu asumsi bahwa `MatVector` dari `findContours` berisi satu `Mat` per kontur yang bisa langsung dipakai `contourArea`/`boundingRect` — itu asumsi paling berisiko di implementasi ini.
+**Status verifikasi:** lolos `npx tsc --noEmit` DAN `./gradlew assembleDebug` (BUILD SUCCESSFUL, native module `react-native-fast-opencv` ter-link dengan benar, dicek 30 Juli 2026). ✅ **SUDAH diverifikasi runtime** di device fisik (31 Juli 2026) — capture foto via volume-button jalan, `createFromBase64` → `cvtColor` → `GaussianBlur` → `Canny` → `findContours` seluruhnya jalan tanpa crash. `findContours` mengembalikan 0 kontur di tes dengan foto dokumen BPKB → pipeline fallback ke foto asli berjalan sesuai desain. **Belum dites:** crop + enhance saat contour ditemukan (butuh foto dengan background kontras tinggi), OCR step 3, barcode step 5, upload submit.
+
+### Bug runtime ditemukan & diperbaiki 31 Juli 2026 (session device pertama)
+
+Dua bug SIGSEGV ditemukan saat pertama kali menjalankan app di device fisik (Xiaomi, Android). Keduanya **native crash** — `try/catch` JS tidak bisa menangkap, langsung force close.
+
+**Bug #1: `uriToBase64()` pakai browser API di React Native**
+- **Gejala:** SIGSEGV di `libreact-native-fast-opencv.so` saat volume-down ditekan
+- **Root cause:** `documentScanner.ts` versi awal pakai `fetch(file://)` → `response.blob()` → `FileReader.readAsDataURL()` untuk konversi file → base64. Ini pola browser, bukan React Native. `FileReader` polyfill di Hermes tidak reliable → base64 corrupt → `Mat.createFromBase64()` menerima data invalid → `cvtColor` SIGSEGV
+- **Fix:** Ganti dengan `RNFS.readFile(filePath, 'base64')` dari `react-native-fs` (native file read, reliable di RN). Tambah dependency `react-native-fs`
+- **Deteksi:** Logcat `adb logcat *:E | grep -i opencv` → `Fatal signal 11 (SIGSEGV), fault addr 0x0, libreact-native-fast-opencv.so`
+
+**Bug #2: `Mat.create()` tanpa argumen → null pointer di native OpenCV**
+- **Gejala:** Masih SIGSEGV setelah fix #1, crash di `OpenCV.cvtColor(src, gray, COLOR_BGR2GRAY)` padahal `src` valid (3264x2448)
+- **Root cause:** `Mat.create()` tanpa argumen menghasilkan Mat "kosong" (rows=0, cols=0, internal pointer null). `react-native-fast-opencv` **TIDAK** auto-allocate dst Mat seperti OpenCV C++ standar — passing empty Mat ke `cvtColor`/`GaussianBlur`/`Canny` = native null pointer dereference
+- **Fix:** Pre-allocate semua Mat dengan dimensi & dataType eksplisit: `Mat.create(rows, cols, DataTypes.CV_8UC1)` untuk grayscale, `DataTypes.CV_8UC3` untuk warna. Import `DataTypes` dari `react-native-fast-opencv`
+- **Deteksi:** Step-by-step logging + test `cvtColor` pada 4x4 Mat kecil (succeed) vs real image (crash) → isolasi ke empty dst Mat
+- **Pelajaran KRUSIAL untuk library ini:** `Mat.create()` tanpa argumen TIDAK sama dengan `cv::Mat()` di C++. Di C++, `cvtColor` auto-alloc dst kalau kosong. Di binding JSI ini, dst HARUS di-pre-alloc. Ini berlaku untuk SEMUA fungsi OpenCV yang menerima dst Mat (`cvtColor`, `GaussianBlur`, `Canny`, `crop`, `convertScaleAbs`, dst).
+
+**Status setelah fix:**
+- ✅ Pipeline OpenCV jalan penuh tanpa crash: `createFromBase64` → `cvtColor` → `GaussianBlur` → `Canny` → `findContours`
+- ✅ `findContours` mengembalikan 0 kontur di tes → fallback ke foto asli berjalan sesuai desain (Bagian 6.4)
+- ✅ `tsc` bersih, `gradlew assembleDebug` BUILD SUCCESSFUL
+- ❌ Belum tes: crop+enhance saat contour ditemukan, OCR step 3, barcode step 5, upload submit
 
 ### Yang sengaja belum dikerjakan (bukan lupa — keputusan sadar, lihat alasan di bagian sebelumnya)
 
@@ -310,8 +335,10 @@ Implementasi final ada di [src/utils/documentScanner.ts](src/utils/documentScann
 
 ### LANGKAH SELANJUTNYA (mulai dari sini di sesi/device baru)
 
-1. **Colok HP Android via USB, aktifkan USB debugging, `adb devices` harus menampilkan device.** Kalau install dari clone/pull baru: `npm install` dulu (akan otomatis narik `react-native-vision-camera`, `react-native-worklets-core`, `react-native-fast-opencv` dari `package.json`).
-2. Jalankan `npx react-native start` (Metro) di satu terminal, lalu `npx react-native run-android` di terminal lain (atau `npx react-native run-android --device` kalau ada lebih dari satu device/emulator).
-3. **Uji manual end-to-end**, urutan sesuai daftar risiko di "Ringkasan super singkat" di atas. Kalau app crash saat buka kamera: cek dulu permission `CAMERA` di-grant (dialog harus muncul otomatis lewat `useCameraPermission`), lalu cek logcat (`adb logcat *:E`) untuk exception native asli — itu satu-satunya cara lihat error sungguhan dari vision-camera/OpenCV, JS error boundary tidak akan menangkapnya.
-4. **Kalau hasil crop dari `documentScanner.ts` terlihat aneh** (area kepotong salah, gambar rusak, atau app hang lama saat capture): kemungkinan besar di asumsi bahwa `MatVector` hasil `findContours` bisa langsung dipakai `contourArea`/`boundingRect` per-elemen — cek dulu itu, jangan langsung asumsikan library-nya rusak. Fallback (`borderDetected: false`, pakai foto asli) HARUS tetap jalan walau bagian ini gagal — kalau app malah crash (bukan fallback), berarti ada exception yang lolos dari try/catch di `processScanImage`, perlu investigasi.
-5. Setelah alur dasar terbukti jalan: pertimbangkan dua item "sengaja belum dikerjakan" di atas, urut sesuai prioritas operasional (live overlay = nice-to-have UX, perspective warp = kualitas hasil scan).
+1. ✅ ~~Colok HP, jalankan app, tes capture~~ — **SUDAH DILAKUKAN 31 Juli 2026.** Capture + OpenCV pipeline jalan tanpa crash.
+2. **Tes step 3 (OCR + getDealer):** buka ScanStep3, foto halaman "Identitas Kendaraan Lanjutan" BPKB, pastikan `@react-native-ml-kit/text-recognition` membaca nomor mesin dan `GET /api/get-dealer` mengembalikan data dealer. Ini native module gaya lama — kalau error, cek interop layer RN (bukan ganti library).
+3. **Tes step 5 (barcode):** buka ScanStep5, arahkan kamera ke barcode BPKB, pastikan `useCodeScanner` (vision-camera v4) mendeteksi barcode dan auto-advance. Input manual harus selalu tersedia.
+4. **Tes upload submit:** setelah 4 foto + nobpkb terisi, submit ke `POST /api/bpkb/process`, pastikan response 202 + track_id. Cek bahwa `images[]` berisi 4 file terkompresi (~1MB each).
+5. **Tes layar tracking:** setelah submit, pastikan SSE endpoint (`/api/bpkb/track/{track}/stream`) mengirim event dan layar progres update sesuai stage.
+6. **Tuning `findContours`** (opsional, bisa nanti): saat ini 0 kontur terdeteksi → semua foto pakai fallback asli. Bisa ditingkatkan dengan: (a) resize gambar ke resolusi lebih kecil sebelum contour detection, (b) pakai `RETR_EXTERNAL` bukan `RETR_LIST`, (c) sesuaikan `MIN_CONTOUR_AREA_RATIO`, (d) tambah dilate/erode sebelum Canny untuk menutup gap di edge.
+7. **Perspective warp penuh** (opsional, bisa nanti): fungsi `getPerspectiveTransform` + `warpPerspective` sudah terkonfirmasi ada di API. Tinggal dirangkai SETELAH crop bounding-box terbukti berfungsi di device.

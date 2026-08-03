@@ -4,10 +4,12 @@ import {
   Rect,
   Size,
   MatVector,
+  DataTypes,
   ColorConversionCodes,
   RetrievalModes,
   ContourApproximationModes,
 } from 'react-native-fast-opencv';
+import RNFS from 'react-native-fs';
 
 const MIN_CONTOUR_AREA_RATIO = 0.15;
 
@@ -16,24 +18,8 @@ export interface ScanResult {
   borderDetected: boolean;
 }
 
-async function uriToBase64(uri: string): Promise<string> {
-  const response = await fetch(uri);
-  const blob = await response.blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Gagal membaca file gambar.'));
-    reader.onloadend = () => {
-      const result = reader.result;
-      const base64 =
-        typeof result === 'string' ? result.split(',')[1] : undefined;
-      if (!base64) {
-        reject(new Error('Format base64 tidak valid.'));
-        return;
-      }
-      resolve(base64);
-    };
-    reader.readAsDataURL(blob);
-  });
+function uriToFilePath(uri: string): string {
+  return uri.replace('file://', '');
 }
 
 /**
@@ -61,18 +47,26 @@ export async function processScanImage(uri: string): Promise<ScanResult> {
   };
 
   try {
-    const base64 = await uriToBase64(uri);
+    const filePath = uriToFilePath(uri);
+    const base64 = await RNFS.readFile(filePath, 'base64');
+
     const src = track(Mat.createFromBase64(base64));
+
+    if (src.rows === 0 || src.cols === 0) {
+      releaseAll();
+      return {uri, borderDetected: false};
+    }
+
     const totalArea = src.cols * src.rows;
 
-    const gray = track(Mat.create());
+    const gray = track(Mat.create(src.rows, src.cols, DataTypes.CV_8UC1));
     OpenCV.cvtColor(src, gray, ColorConversionCodes.COLOR_BGR2GRAY);
 
     const blurSize = track(Size.create(5, 5));
-    const blurred = track(Mat.create());
+    const blurred = track(Mat.create(gray.rows, gray.cols, DataTypes.CV_8UC1));
     OpenCV.GaussianBlur(gray, blurred, blurSize, 0);
 
-    const edges = track(Mat.create());
+    const edges = track(Mat.create(gray.rows, gray.cols, DataTypes.CV_8UC1));
     OpenCV.Canny(blurred, edges, 75, 200);
 
     const contours = track(MatVector.create());
@@ -102,23 +96,18 @@ export async function processScanImage(uri: string): Promise<ScanResult> {
     }
     track(bestRect);
 
-    const cropped = track(Mat.create());
+    const cropped = track(Mat.create(bestRect.height, bestRect.width, DataTypes.CV_8UC3));
     OpenCV.crop(src, cropped, bestRect);
 
-    // Enhance "scan look": naikkan kontras & brightness tipis, tetap warna
-    // (bukan B&W/threshold — cap/tanda tangan warna harus tetap terlihat).
-    const enhanced = track(Mat.create());
+    const enhanced = track(Mat.create(bestRect.height, bestRect.width, DataTypes.CV_8UC3));
     OpenCV.convertScaleAbs(cropped, enhanced, 1.15, 8);
 
-    const outputPath = uri
-      .replace('file://', '')
-      .replace(/\.jpe?g$/i, '_scan.jpg');
+    const outputPath = uriToFilePath(uri).replace(/\.jpe?g$/i, '_scan.jpg');
     enhanced.saveToFile(outputPath);
     releaseAll();
 
     return {uri: `file://${outputPath}`, borderDetected: true};
   } catch {
-    // Fallback wajib (Bagian 6.4): jangan pernah blok proses kalau OpenCV gagal.
     releaseAll();
     return {uri, borderDetected: false};
   }
