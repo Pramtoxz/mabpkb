@@ -1,9 +1,9 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {View, StyleSheet} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import LiquidGlassTabBar from '../components/LiquidGlassTabBar';
 import {HomeIcon, CameraIcon, BatchIcon} from '../components/TabIcons';
-import {TabNavProvider} from '../contexts/TabNavContext';
+import {TabNavProvider, useTabNav} from '../contexts/TabNavContext';
 import HomeStack from './HomeStack';
 import ScanStack from './ScanStack';
 import BatchStack from './BatchStack';
@@ -15,43 +15,43 @@ const screens = [
   {key: 'batch', component: BatchStack},
 ] as const;
 
-export default function AppNavigator() {
-  const [activeTab, setActiveTab] = useState(0);
+const tabsConfig = [
+  {key: 'home', Icon: HomeIcon, tab: 0},
+  {key: 'scan', Icon: CameraIcon, tab: 1},
+  {key: 'batch', Icon: BatchIcon, tab: 2},
+] as const;
 
-  const tabs: [
+function NavigatorContent() {
+  const {activeTab, setActiveTab} = useTabNav();
+
+  const tabs = tabsConfig.map(t => ({
+    key: t.key,
+    icon: <t.Icon color={t.key === 'scan' ? undefined : Colors.neutral} />,
+    iconActive: <t.Icon color={t.key === 'scan' ? undefined : Colors.onPrimary} />,
+    onPress: () => setActiveTab(t.tab),
+  })) as [
     {key: string; icon: React.ReactNode; iconActive: React.ReactNode; onPress: () => void},
     {key: string; icon: React.ReactNode; iconActive: React.ReactNode; onPress: () => void},
     {key: string; icon: React.ReactNode; iconActive: React.ReactNode; onPress: () => void},
-  ] = [
-    {
-      key: 'home',
-      icon: <HomeIcon color={Colors.neutral} />,
-      iconActive: <HomeIcon color={Colors.onPrimary} />,
-      onPress: () => setActiveTab(0),
-    },
-    {
-      key: 'scan',
-      icon: <CameraIcon />,
-      iconActive: <CameraIcon />,
-      onPress: () => setActiveTab(1),
-    },
-    {
-      key: 'batch',
-      icon: <BatchIcon color={Colors.neutral} />,
-      iconActive: <BatchIcon color={Colors.onPrimary} />,
-      onPress: () => setActiveTab(2),
-    },
   ];
 
   const ActiveScreen = screens[activeTab].component;
 
   return (
+    <>
+      <View style={styles.screenContainer}>
+        <ActiveScreen />
+      </View>
+      <LiquidGlassTabBar tabs={tabs} activeIndex={activeTab} hidden={activeTab === 1} />
+    </>
+  );
+}
+
+export default function AppNavigator() {
+  return (
     <NavigationContainer>
-      <TabNavProvider value={{activeTab, setActiveTab}}>
-        <View style={styles.screenContainer}>
-          <ActiveScreen />
-        </View>
-        <LiquidGlassTabBar tabs={tabs} activeIndex={activeTab} hidden={activeTab === 1} />
+      <TabNavProvider>
+        <NavigatorContent />
       </TabNavProvider>
     </NavigationContainer>
   );

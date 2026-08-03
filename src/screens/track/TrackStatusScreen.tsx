@@ -2,7 +2,6 @@ import React, {useCallback, useEffect, useState} from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   TouchableOpacity,
   Linking,
@@ -17,19 +16,16 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useRoute, type RouteProp} from '@react-navigation/native';
+import {Config} from 'react-native-config';
 import CollapsibleTopAppBar, {
   useCollapsibleHeader,
   EXPANDED_HEIGHT,
 } from '../../components/CollapsibleTopAppBar';
-import {NotificationIcon, CheckIcon, XIcon} from '../../components/TabIcons';
+import {NotificationIcon, CheckIcon, XIcon, CameraIcon} from '../../components/TabIcons';
 import {useTabNav} from '../../contexts/TabNavContext';
 import {useBpkbStream} from '../../hooks/useBpkbStream';
 import {trackBpkb, type BpkbTrackResponse} from '../../api/endpoints';
-import type {BatchStackParamList} from '../../navigation/types';
 import {Colors, Fonts} from '../../constants';
-
-type TrackRoute = RouteProp<BatchStackParamList, 'TrackStatus'>;
 
 const STAGE_META: {key: string; label: string}[] = [
   {key: 'pending', label: 'Queued'},
@@ -47,16 +43,12 @@ function getStageIndex(stage: string): number {
 export default function TrackStatusScreen() {
   const insets = useSafeAreaInsets();
   const {scrollY, onScroll} = useCollapsibleHeader();
-  const {setActiveTab} = useTabNav();
-  const route = useRoute<TrackRoute>();
+  const {setActiveTab, pendingTrackId, setPendingTrackId} = useTabNav();
 
-  const paramTrackId = route.params?.trackId;
-
-  const [trackIdInput, setTrackIdInput] = useState('');
-  const [trackId, setTrackId] = useState<string | null>(paramTrackId ?? null);
+  const [trackId, setTrackId] = useState<string | null>(null);
   const [trackDetail, setTrackDetail] = useState<BpkbTrackResponse | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const {data, connected} = useBpkbStream(trackId);
+  const {data} = useBpkbStream(trackId);
 
   const pulse = useSharedValue(0);
 
@@ -72,10 +64,11 @@ export default function TrackStatusScreen() {
   }, [pulse]);
 
   useEffect(() => {
-    if (paramTrackId) {
-      setTrackId(paramTrackId);
+    if (pendingTrackId) {
+      setTrackId(pendingTrackId);
+      setPendingTrackId(null);
     }
-  }, [paramTrackId]);
+  }, [pendingTrackId, setPendingTrackId]);
 
   const fetchDetail = useCallback(async (id: string) => {
     try {
@@ -92,14 +85,6 @@ export default function TrackStatusScreen() {
 
   const pulseStyle = useAnimatedStyle(() => ({opacity: pulse.value}));
 
-  const handleTrack = useCallback(() => {
-    const trimmed = trackIdInput.trim();
-    if (trimmed) {
-      setTrackId(trimmed);
-      setTrackDetail(null);
-    }
-  }, [trackIdInput]);
-
   const handleRefresh = useCallback(async () => {
     if (!trackId) {return;}
     setRefreshing(true);
@@ -112,10 +97,44 @@ export default function TrackStatusScreen() {
   const isFailed = currentStatus === 'failed';
   const isCompleted = currentStatus === 'completed';
   const errorMessage = data?.error_message ?? trackDetail?.error_message;
-  const pdfUrl = data?.pdf_url;
+  const pdfRelative = data?.pdf_url ?? trackDetail?.pdf_path;
 
-  const showDetail = !!trackDetail;
-  const showStepper = !!trackId;
+  const buildPdfUrl = (path: string) => {
+    if (path.startsWith('http')) {return path;}
+    const base = Config.API_BASE_URL ?? '';
+    return `${base.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
+  };
+
+  if (!trackId) {
+    return (
+      <View style={styles.screen}>
+        <CollapsibleTopAppBar
+          title="Status Proses"
+          subtitle="Lacak pemrosesan BPKB"
+          scrollY={scrollY}
+          onBack={() => setActiveTab(0)}
+          actions={[
+            {icon: <NotificationIcon color={Colors.neutral} />, onPress: () => {}, accessibilityLabel: 'Notifikasi'},
+          ]}
+        />
+        <View style={[styles.emptyContainer, {paddingTop: EXPANDED_HEIGHT + insets.top}]}>
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>Belum ada BPKB dilacak</Text>
+            <Text style={styles.emptyDesc}>
+              Status pemrosesan akan muncul otomatis setelah Anda submit scan BPKB.
+            </Text>
+            <TouchableOpacity
+              style={styles.scanButton}
+              activeOpacity={0.85}
+              onPress={() => setActiveTab(1)}>
+              <CameraIcon size={20} color={Colors.onPrimary} />
+              <Text style={styles.scanButtonText}>Mulai Scan BPKB</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
@@ -135,130 +154,107 @@ export default function TrackStatusScreen() {
         onScroll={onScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />
         }>
         <View style={styles.content}>
-          <View style={styles.inputCard}>
-            <Text style={styles.inputLabel}>Track ID</Text>
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.input}
-                placeholder="Masukkan Track ID"
-                placeholderTextColor={Colors.border}
-                value={trackIdInput}
-                onChangeText={setTrackIdInput}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TouchableOpacity style={styles.trackButton} onPress={handleTrack} activeOpacity={0.8}>
-                <Text style={styles.trackButtonText}>Lacak</Text>
-              </TouchableOpacity>
-            </View>
-            {trackId && connected && (
-              <View style={styles.liveRow}>
-                <View style={styles.liveDot} />
-                <Text style={styles.liveText}>LIVE</Text>
-              </View>
-            )}
-          </View>
-
-          {showDetail && trackDetail && (
+          {trackDetail && (
             <View style={styles.detailCard}>
               <DetailRow label="Konsumen" value={trackDetail.nama_konsumen ?? '-'} />
               <DetailRow label="No Mesin" value={trackDetail.no_mesin} />
               <DetailRow label="No BPKB" value={trackDetail.no_bpkb} />
-              <DetailRow label="Track ID" value={trackDetail.id} mono />
             </View>
           )}
 
-          {showStepper && (
-            <View style={styles.stepperCard}>
-              <Text style={styles.stepperTitle}>Progress</Text>
-              {STAGE_META.map((stage, idx) => {
-                const isDone = isFailed ? idx < currentStageIdx : idx < currentStageIdx;
-                const isActive = !isFailed && !isCompleted && idx === currentStageIdx;
-                const isCurrentFailed = isFailed && idx === currentStageIdx;
+          <View style={styles.stepperCard}>
+            <Text style={styles.stepperTitle}>Progress</Text>
+            {STAGE_META.map((stage, idx) => {
+              const isDone = isFailed ? idx < currentStageIdx : idx < currentStageIdx;
+              const isActive = !isFailed && !isCompleted && idx === currentStageIdx;
+              const isCurrentFailed = isFailed && idx === currentStageIdx;
 
-                return (
-                  <View key={stage.key} style={styles.stepRow}>
-                    <View style={styles.stepLineCol}>
+              return (
+                <View key={stage.key} style={styles.stepRow}>
+                  <View style={styles.stepLineCol}>
+                    <View
+                      style={[
+                        styles.stepDot,
+                        isDone && styles.stepDotDone,
+                        isActive && styles.stepDotActive,
+                        isCurrentFailed && styles.stepDotFailed,
+                      ]}>
+                      {isDone && <CheckIcon size={14} color="#FFFFFF" />}
+                      {isCurrentFailed && <XIcon size={14} color="#FFFFFF" />}
+                      {isActive && <Animated.View style={[styles.stepPulse, pulseStyle]} />}
+                    </View>
+                    {idx < STAGE_META.length - 1 && (
                       <View
                         style={[
-                          styles.stepDot,
-                          isDone && styles.stepDotDone,
-                          isActive && styles.stepDotActive,
-                          isCurrentFailed && styles.stepDotFailed,
-                        ]}>
-                        {isDone && <CheckIcon size={14} color="#FFFFFF" />}
-                        {isCurrentFailed && <XIcon size={14} color="#FFFFFF" />}
-                        {isActive && <Animated.View style={[styles.stepPulse, pulseStyle]} />}
-                      </View>
-                      {idx < STAGE_META.length - 1 && (
-                        <View
-                          style={[
-                            styles.stepLine,
-                            isDone && styles.stepLineDone,
-                            isCurrentFailed && styles.stepLineFailed,
-                          ]}
-                        />
-                      )}
-                    </View>
-
-                    <View style={styles.stepContent}>
-                      <Text
-                        style={[
-                          styles.stepLabel,
-                          isDone && styles.stepLabelDone,
-                          isActive && styles.stepLabelActive,
-                          isCurrentFailed && styles.stepLabelFailed,
-                          !isDone && !isActive && !isCurrentFailed && styles.stepLabelPending,
-                        ]}>
-                        {stage.label}
-                      </Text>
-                      {isActive && currentStatus === 'processing' && (
-                        <Text style={styles.stepHint}>sedang diproses...</Text>
-                      )}
-                      {isCurrentFailed && (
-                        <Text style={styles.stepHintFailed}>gagal</Text>
-                      )}
-                    </View>
+                          styles.stepLine,
+                          isDone && styles.stepLineDone,
+                          isCurrentFailed && styles.stepLineFailed,
+                        ]}
+                      />
+                    )}
                   </View>
-                );
-              })}
-            </View>
-          )}
 
-          {showStepper && isCompleted && pdfUrl && (
+                  <View style={styles.stepContent}>
+                    <Text
+                      style={[
+                        styles.stepLabel,
+                        isDone && styles.stepLabelDone,
+                        isActive && styles.stepLabelActive,
+                        isCurrentFailed && styles.stepLabelFailed,
+                        !isDone && !isActive && !isCurrentFailed && styles.stepLabelPending,
+                      ]}>
+                      {stage.label}
+                    </Text>
+                    {isActive && currentStatus === 'processing' && (
+                      <Text style={styles.stepHint}>sedang diproses...</Text>
+                    )}
+                    {isCurrentFailed && (
+                      <Text style={styles.stepHintFailed}>gagal</Text>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+
+          {isCompleted && pdfRelative && (
             <TouchableOpacity
               style={styles.pdfButton}
               activeOpacity={0.85}
-              onPress={() => Linking.openURL(pdfUrl)}>
+              onPress={() => Linking.openURL(buildPdfUrl(pdfRelative))}>
               <Text style={styles.pdfButtonText}>Buka PDF</Text>
             </TouchableOpacity>
           )}
 
-          {showStepper && isCompleted && !pdfUrl && trackDetail?.pdf_path && (
-            <TouchableOpacity
-              style={styles.pdfButton}
-              activeOpacity={0.85}
-              onPress={() => Linking.openURL(`${trackDetail.pdf_path}`)}>
-              <Text style={styles.pdfButtonText}>Buka PDF</Text>
-            </TouchableOpacity>
-          )}
-
-          {showStepper && isFailed && errorMessage && (
+          {isFailed && errorMessage && (
             <View style={styles.errorCard}>
               <Text style={styles.errorTitle}>Error</Text>
               <Text style={styles.errorText}>{errorMessage}</Text>
             </View>
           )}
 
-          {showStepper && !data && !trackDetail && (
+          {!trackDetail && !data && (
             <View style={styles.waitingCard}>
               <Text style={styles.waitingText}>Menunggu update dari server...</Text>
             </View>
+          )}
+
+          {(isCompleted || isFailed) && (
+            <TouchableOpacity
+              style={styles.newScanButton}
+              activeOpacity={0.85}
+              onPress={() => {
+                setTrackId(null);
+                setTrackDetail(null);
+                setActiveTab(1);
+              }}>
+              <CameraIcon size={20} color={Colors.onPrimary} />
+              <Text style={styles.newScanButtonText}>Scan BPKB Lagi</Text>
+            </TouchableOpacity>
           )}
         </View>
       </Animated.ScrollView>
@@ -266,13 +262,11 @@ export default function TrackStatusScreen() {
   );
 }
 
-function DetailRow({label, value, mono}: {label: string; value: string; mono?: boolean}) {
+function DetailRow({label, value}: {label: string; value: string}) {
   return (
     <View style={styles.detailRow}>
       <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={[styles.detailValue, mono && styles.detailValueMono]} numberOfLines={1}>
-        {value}
-      </Text>
+      <Text style={styles.detailValue} numberOfLines={1}>{value}</Text>
     </View>
   );
 }
@@ -292,69 +286,50 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 120,
   },
-  inputCard: {
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  emptyCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    padding: 20,
+    padding: 32,
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 2,
+    gap: 12,
+    width: '100%',
   },
-  inputLabel: {
-    fontFamily: Fonts.body.medium,
-    fontSize: 13,
+  emptyTitle: {
+    fontFamily: Fonts.heading.bold,
+    fontSize: 18,
     color: Colors.neutral,
-    opacity: 0.6,
-    marginBottom: 8,
   },
-  inputRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  input: {
-    flex: 1,
+  emptyDesc: {
     fontFamily: Fonts.body.regular,
-    fontSize: 15,
-    backgroundColor: Colors.secondary,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    color: Colors.neutral,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  trackButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    justifyContent: 'center',
-  },
-  trackButtonText: {
-    fontFamily: Fonts.heading.semiBold,
     fontSize: 14,
-    color: Colors.onPrimary,
+    color: Colors.neutral,
+    opacity: 0.5,
+    textAlign: 'center',
+    lineHeight: 20,
   },
-  liveRow: {
+  scanButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 10,
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    gap: 8,
+    marginTop: 8,
   },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#16a34a',
-  },
-  liveText: {
-    fontFamily: Fonts.body.semiBold,
-    fontSize: 11,
-    color: '#16a34a',
-    letterSpacing: 1,
+  scanButtonText: {
+    fontFamily: Fonts.heading.semiBold,
+    fontSize: 15,
+    color: Colors.onPrimary,
   },
   detailCard: {
     backgroundColor: '#FFFFFF',
@@ -382,12 +357,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.heading.semiBold,
     fontSize: 16,
     color: Colors.neutral,
-  },
-  detailValueMono: {
-    fontFamily: Fonts.body.regular,
-    fontSize: 12,
-    color: Colors.neutral,
-    opacity: 0.7,
   },
   stepperCard: {
     backgroundColor: '#FFFFFF',
@@ -543,5 +512,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.neutral,
     opacity: 0.5,
+  },
+  newScanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+    borderRadius: 16,
+    paddingVertical: 16,
+    gap: 8,
+    shadowColor: Colors.primary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  newScanButtonText: {
+    fontFamily: Fonts.heading.semiBold,
+    fontSize: 16,
+    color: Colors.onPrimary,
   },
 });

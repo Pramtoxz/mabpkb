@@ -18,6 +18,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ScanStackParamList} from '../../navigation/types';
 import {Colors, Fonts} from '../../constants';
 import {useScan} from '../../contexts/ScanContext';
+import {useTabNav} from '../../contexts/TabNavContext';
 import {useAlert} from '../../contexts/AlertContext';
 import {useSound} from '../../hooks/useSound';
 import {useHardwareKey} from '../../hooks/useHardwareKey';
@@ -42,6 +43,7 @@ const CODE_TYPES = [
 export default function ScanStep5Screen({navigation}: Props) {
   const insets = useSafeAreaInsets();
   const {state, setNobpkb, resetScan} = useScan();
+  const {setActiveTab, setPendingTrackId} = useTabNav();
   const {showAlert} = useAlert();
   const {play} = useSound();
   const device = useCameraDevice('back');
@@ -89,15 +91,15 @@ export default function ScanStep5Screen({navigation}: Props) {
           confirmText: 'Lacak Status',
           cancelText: 'Scan Lagi',
           onConfirm: () => {
+            setPendingTrackId(result.track_id);
             resetScan();
-            navigation.getParent()?.navigate('BatchTab', {
-              screen: 'TrackStatus',
-              params: {trackId: result.track_id},
-            });
+            setPhase('scanning');
+            setActiveTab(2);
           },
           onCancel: () => {
             resetScan();
-            navigation.getParent()?.navigate('ScanTab', {screen: 'ScanStep1'});
+            setPhase('scanning');
+            navigation.navigate('ScanStep1');
           },
         });
       } catch (error: any) {
@@ -111,7 +113,7 @@ export default function ScanStep5Screen({navigation}: Props) {
         isSubmittingRef.current = false;
       }
     },
-    [navigation, play, resetScan, showAlert, state],
+    [navigation, play, resetScan, setActiveTab, setPendingTrackId, showAlert, state],
   );
 
   const acceptNobpkb = useCallback(
