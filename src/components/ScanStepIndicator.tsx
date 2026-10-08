@@ -1,7 +1,16 @@
 import React from 'react';
 import {View, Text, StyleSheet} from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {CheckIcon} from './TabIcons';
-import {Colors, Fonts} from '../constants';
+import {Colors, Typography} from '../constants';
+
+const STEP_LABELS = [
+  'Identitas Pemilik',
+  'Identitas Kendaraan',
+  'Identitas Lanjutan',
+  'Dokumen Persyaratan',
+  'Barcode BPKB',
+];
 
 interface ScanStepIndicatorProps {
   currentStep: number;
@@ -9,75 +18,110 @@ interface ScanStepIndicatorProps {
 }
 
 export default function ScanStepIndicator({currentStep, totalSteps}: ScanStepIndicatorProps) {
-  return (
-    <View style={styles.container}>
-      {Array.from({length: totalSteps}, (_, i) => {
-        const step = i + 1;
-        const isDone = step < currentStep;
-        const isActive = step === currentStep;
+  const insets = useSafeAreaInsets();
+  const label = STEP_LABELS[currentStep - 1] ?? '';
 
-        return (
-          <React.Fragment key={step}>
-            {i > 0 && <View style={[styles.line, isDone && styles.lineDone]} />}
-            <View style={[styles.dot, isDone && styles.dotDone, isActive && styles.dotActive]}>
+  return (
+    <View style={[styles.container, {paddingTop: insets.top + 12}]}>
+      <Text style={styles.stepLabel} numberOfLines={1}>
+        STEP {currentStep} · {label}
+      </Text>
+
+      <View style={styles.bar}>
+        {Array.from({length: totalSteps}, (_, i) => {
+          const step = i + 1;
+          const isDone = step < currentStep;
+          const isActive = step === currentStep;
+
+          return (
+            <React.Fragment key={step}>
+              {i > 0 && <View style={styles.segmentGap} />}
+              <View
+                style={[
+                  styles.segment,
+                  isDone && styles.segmentDone,
+                  isActive && styles.segmentActive,
+                ]}
+              />
+            </React.Fragment>
+          );
+        })}
+      </View>
+
+      <View style={styles.checkRow}>
+        {Array.from({length: totalSteps}, (_, i) => {
+          const step = i + 1;
+          const isDone = step < currentStep;
+          const isActive = step === currentStep;
+
+          return (
+            <View key={step} style={styles.checkSlot}>
               {isDone ? (
-                <CheckIcon size={16} color="#FFFFFF" />
+                <CheckIcon size={14} color={Colors.accent} />
               ) : (
-                <Text style={[styles.dotText, isActive && styles.dotTextActive]}>{step}</Text>
+                <View
+                  style={[
+                    styles.checkDot,
+                    isActive && styles.checkDotActive,
+                  ]}
+                />
               )}
             </View>
-          </React.Fragment>
-        );
-      })}
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    paddingBottom: 8,
+    paddingHorizontal: 20,
+  },
+  stepLabel: {
+    ...Typography.label,
+    color: Colors.textSecondary,
+    marginBottom: 10,
+  },
+  bar: {
     flexDirection: 'row',
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  segment: {
+    flex: 1,
+    backgroundColor: Colors.borderLight,
+    borderRadius: 2,
+  },
+  segmentGap: {
+    width: 4,
+  },
+  segmentDone: {
+    backgroundColor: Colors.accent,
+  },
+  segmentActive: {
+    backgroundColor: Colors.accent,
+  },
+  checkRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  checkSlot: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 0,
+    width: 24,
+    height: 24,
   },
-  dot: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.secondary,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
+  checkDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.borderLight,
   },
-  dotDone: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
-  },
-  dotActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  dotText: {
-    fontFamily: Fonts.heading.semiBold,
-    fontSize: 14,
-    color: Colors.neutral,
-    opacity: 0.4,
-  },
-  dotTextActive: {
-    color: '#FFFFFF',
-    opacity: 1,
-  },
-  line: {
-    width: 32,
-    height: 2,
-    backgroundColor: Colors.border,
-  },
-  lineDone: {
-    backgroundColor: '#16a34a',
+  checkDotActive: {
+    backgroundColor: Colors.accent,
   },
 });

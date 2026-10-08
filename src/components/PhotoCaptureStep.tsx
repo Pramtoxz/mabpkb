@@ -1,12 +1,15 @@
 import React, {useCallback, useRef, useState} from 'react';
-import {View, Text, StyleSheet} from 'react-native';
+import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {Colors, Fonts} from '../constants';
+import {Colors, Typography, Spacing, Radius} from '../constants';
 import type {ScanImage} from '../contexts/ScanContext';
 import {useHardwareKey} from '../hooks/useHardwareKey';
+import {useHaptic} from '../hooks/useHaptic';
+import {useSound} from '../hooks/useSound';
 import {CheckIcon} from './TabIcons';
 import PedalCamera from './PedalCamera';
 import ScanStepIndicator from './ScanStepIndicator';
+import ThumbnailStrip from './ThumbnailStrip';
 
 const NEXT_STEP_DELAY_MS = 1000;
 
@@ -31,15 +34,20 @@ export default function PhotoCaptureStep({
 }: PhotoCaptureStepProps) {
   const insets = useSafeAreaInsets();
   const [phase, setPhase] = useState<Phase>('camera');
+  const [hintExpanded, setHintExpanded] = useState(true);
   const nextTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const {trigger: haptic} = useHaptic();
+  const {play: playSound} = useSound();
 
   const handleCapture = useCallback(
     (img: ScanImage) => {
+      haptic('capture');
+      playSound('tick');
       onCaptured(img);
       setPhase('done');
       nextTimerRef.current = setTimeout(onNext, NEXT_STEP_DELAY_MS);
     },
-    [onCaptured, onNext],
+    [onCaptured, onNext, haptic, playSound],
   );
 
   const handleRetake = useCallback(() => {
@@ -52,7 +60,7 @@ export default function PhotoCaptureStep({
   useHardwareKey(handleRetake, phase === 'done', 'volumeUp');
 
   return (
-    <View style={[styles.container, {paddingBottom: 24 + insets.bottom}]}>
+    <View style={[styles.container, {paddingBottom: Spacing.xxl + insets.bottom}]}>
       <ScanStepIndicator currentStep={step} totalSteps={totalSteps} />
 
       <View style={styles.cameraArea}>
@@ -60,20 +68,32 @@ export default function PhotoCaptureStep({
           <PedalCamera filename={filename} onCapture={handleCapture} />
         ) : (
           <View style={styles.doneCard}>
-            <CheckIcon size={56} color="#16a34a" />
+            <CheckIcon size={56} color={Colors.success} />
             <Text style={styles.doneText}>Foto {step} tersimpan</Text>
           </View>
         )}
       </View>
 
-      <View style={styles.hintCard}>
-        <Text style={styles.hintTitle}>{title}</Text>
-        <Text style={styles.hintDesc}>
-          {phase === 'done'
-            ? 'Tekan Volume Atas untuk ulang'
-            : 'Tekan pedal (Volume Bawah) untuk foto'}
-        </Text>
-      </View>
+      <ThumbnailStrip currentStep={step} />
+
+      <TouchableOpacity
+        style={styles.hintCard}
+        onPress={() => setHintExpanded(h => !h)}
+        activeOpacity={0.8}>
+        <View style={styles.hintHeader}>
+          <Text style={styles.hintTitle} numberOfLines={1}>
+            {title}
+          </Text>
+          <Text style={styles.hintChevron}>{hintExpanded ? '▾' : '▸'}</Text>
+        </View>
+        {hintExpanded && (
+          <Text style={styles.hintDesc}>
+            {phase === 'done'
+              ? 'Tekan Volume Atas untuk ulang'
+              : 'Tekan pedal (Volume Bawah) untuk foto'}
+          </Text>
+        )}
+      </TouchableOpacity>
     </View>
   );
 }
@@ -82,48 +102,58 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-    padding: 16,
+    paddingHorizontal: Spacing.lg,
   },
   cameraArea: {
     flex: 1,
-    borderRadius: 20,
+    borderRadius: Radius.lg,
     overflow: 'hidden',
-    marginBottom: 16,
+    marginBottom: Spacing.sm,
   },
   doneCard: {
     flex: 1,
-    backgroundColor: '#dcfce7',
-    borderRadius: 20,
+    backgroundColor: Colors.successLight,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#16a34a',
+    borderColor: Colors.success,
     gap: 8,
   },
   doneText: {
-    fontFamily: Fonts.heading.semiBold,
-    fontSize: 18,
-    color: '#16a34a',
+    ...Typography.h3,
+    color: Colors.success,
   },
   hintCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border,
+    marginTop: Spacing.sm,
+  },
+  hintHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   hintTitle: {
-    fontFamily: Fonts.heading.bold,
-    fontSize: 20,
-    color: Colors.primary,
-    marginBottom: 4,
+    ...Typography.label,
+    fontSize: 15,
+    color: Colors.textPrimary,
+    fontFamily: 'Inter-SemiBold',
+    flex: 1,
+  },
+  hintChevron: {
+    ...Typography.label,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginLeft: 8,
   },
   hintDesc: {
-    fontFamily: Fonts.body.regular,
-    fontSize: 14,
-    color: Colors.neutral,
-    opacity: 0.6,
-    textAlign: 'center',
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
+    marginTop: 6,
+    textAlign: 'left',
   },
 });

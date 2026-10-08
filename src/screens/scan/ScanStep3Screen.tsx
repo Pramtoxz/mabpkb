@@ -1,12 +1,13 @@
-import React, {useCallback, useRef, useState} from 'react';
-import {View, Text, TextInput, StyleSheet, Pressable} from 'react-native';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {View, Text, TextInput, StyleSheet, Pressable, TouchableOpacity} from 'react-native';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ScanStackParamList} from '../../navigation/types';
-import {Colors, Fonts} from '../../constants';
+import {Colors, Typography, Spacing, Radius} from '../../constants';
 import {useScan, type ScanImage} from '../../contexts/ScanContext';
 import {useSound} from '../../hooks/useSound';
+import {useHaptic} from '../../hooks/useHaptic';
 import {useHardwareKey} from '../../hooks/useHardwareKey';
 import {CheckIcon, XIcon} from '../../components/TabIcons';
 import {getDealer, type DealerData} from '../../api';
@@ -17,11 +18,13 @@ import {
 import ScanStepIndicator from '../../components/ScanStepIndicator';
 import PedalCamera from '../../components/PedalCamera';
 import ScanFeedback from '../../components/ScanFeedback';
+import ThumbnailStrip from '../../components/ThumbnailStrip';
 
 type Props = NativeStackScreenProps<ScanStackParamList, 'ScanStep3'>;
 type Phase = 'camera' | 'processing' | 'result' | 'error';
 
-const NEXT_STEP_DELAY_MS = 2000;
+const NEXT_STEP_DELAY_MS = 2500;
+const TYPEWRITER_SPEED_MS = 50;
 
 interface VerifiedNoMesin {
   nomesin: string;
@@ -43,42 +46,73 @@ async function verifyCandidates(
 export default function ScanStep3Screen({navigation}: Props) {
   const insets = useSafeAreaInsets();
   const {setPhoto3, setNomesin, setDealer} = useScan();
-  const {play} = useSound();
+  const {play: playSound} = useSound();
+  const {trigger: haptic} = useHaptic();
   const [phase, setPhase] = useState<Phase>('camera');
-  const [resultText, setResultText] = useState('');
+  const [hintExpanded, setHintExpanded] = useState(true);
+  const [displayedResult, setDisplayedResult] = useState('');
+  const [fullResult, setFullResult] = useState('');
   const [dealerName, setDealerName] = useState('');
   const [manualInput, setManualInput] = useState('');
   const [errorText, setErrorText] = useState('');
   const nextTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typewriterRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (typewriterRef.current) {
+        clearInterval(typewriterRef.current);
+      }
+    };
+  }, []);
+
+  const startTypewriter = useCallback((text: string) => {
+    setDisplayedResult('');
+    setFullResult(text);
+    let i = 0;
+    typewriterRef.current = setInterval(() => {
+      i += 1;
+      if (i <= text.length) {
+        setDisplayedResult(text.slice(0, i));
+      } else {
+        if (typewriterRef.current) {
+          clearInterval(typewriterRef.current);
+        }
+      }
+    }, TYPEWRITER_SPEED_MS);
+  }, []);
 
   const acceptNoMesin = useCallback(
     (verified: VerifiedNoMesin) => {
       setNomesin(verified.nomesin);
       setDealer(verified.dealer);
-      setResultText(verified.nomesin);
       setDealerName(verified.dealer.nm_dealer);
-      play('success');
+      haptic('success');
+      playSound('success');
+      startTypewriter(verified.nomesin);
       setPhase('result');
       nextTimerRef.current = setTimeout(
         () => navigation.navigate('ScanStep4'),
         NEXT_STEP_DELAY_MS,
       );
     },
-    [navigation, play, setDealer, setNomesin],
+    [navigation, playSound, haptic, setDealer, setNomesin, startTypewriter],
   );
 
   const failToManual = useCallback(
     (message: string, suggestion: string) => {
       setErrorText(message);
       setManualInput(suggestion);
-      play('error');
+      haptic('error');
+      playSound('error');
       setPhase('error');
     },
-    [play],
+    [playSound, haptic],
   );
 
   const handleCapture = useCallback(
     async (img: ScanImage) => {
+      haptic('capture');
       setPhase('processing');
       setPhoto3(img);
 
@@ -110,7 +144,7 @@ export default function ScanStep3Screen({navigation}: Props) {
         failToManual('Gagal menghubungi server.', candidates[0]!);
       }
     },
-    [acceptNoMesin, failToManual, setPhoto3],
+    [acceptNoMesin, failToManual, setPhoto3, haptic],
   );
 
   const handleManualSubmit = useCallback(async () => {
@@ -136,7 +170,11 @@ export default function ScanStep3Screen({navigation}: Props) {
     if (nextTimerRef.current) {
       clearTimeout(nextTimerRef.current);
     }
-    setResultText('');
+    if (typewriterRef.current) {
+      clearInterval(typewriterRef.current);
+    }
+    setDisplayedResult('');
+    setFullResult('');
     setDealerName('');
     setManualInput('');
     setErrorText('');
@@ -147,7 +185,7 @@ export default function ScanStep3Screen({navigation}: Props) {
   useHardwareKey(handleRetake, phase === 'result', 'volumeUp');
 
   return (
-    <View style={[styles.container, {paddingBottom: 24 + insets.bottom}]}>
+    <View style={[styles.container, {paddingBottom: Spacing.xxl + insets.bottom}]}>
       <ScanStepIndicator currentStep={3} totalSteps={5} />
 
       <View style={styles.cameraArea}>
@@ -161,14 +199,16 @@ export default function ScanStep3Screen({navigation}: Props) {
         )}
         {phase === 'result' && (
           <View style={styles.doneCard}>
-            <CheckIcon size={56} color="#16a34a" />
-            <Text style={styles.resultValue}>{resultText}</Text>
-            <Text style={styles.dealerName}>{dealerName}</Text>
+            <CheckIcon size={56} color={Colors.success} />
+            <Text style={styles.resultValue}>{displayedResult}</Text>
+            {dealerName ? (
+              <Text style={styles.dealerName}>{dealerName}</Text>
+            ) : null}
           </View>
         )}
         {phase === 'error' && (
           <View style={styles.errorCard}>
-            <XIcon size={56} color={Colors.destructive} />
+            <XIcon size={56} color={Colors.error} />
             <Text style={styles.errorText}>{errorText}</Text>
           </View>
         )}
@@ -194,20 +234,32 @@ export default function ScanStep3Screen({navigation}: Props) {
         </View>
       )}
 
-      <View style={styles.hintCard}>
-        <Text style={styles.hintTitle}>Identitas Kendaraan Lanjutan</Text>
-        <Text style={styles.hintDesc}>
-          {phase === 'camera'
-            ? 'Tekan pedal (Volume Bawah) untuk foto & baca No Mesin'
-            : phase === 'error'
-            ? 'Tekan pedal untuk foto ulang, atau perbaiki manual lalu OK'
-            : 'Memproses...'}
-        </Text>
-      </View>
+      <ThumbnailStrip currentStep={3} />
+
+      <TouchableOpacity
+        style={styles.hintCard}
+        onPress={() => setHintExpanded(h => !h)}
+        activeOpacity={0.8}>
+        <View style={styles.hintHeader}>
+          <Text style={styles.hintTitle} numberOfLines={1}>
+            Identitas Kendaraan Lanjutan
+          </Text>
+          <Text style={styles.hintChevron}>{hintExpanded ? '▾' : '▸'}</Text>
+        </View>
+        {hintExpanded && (
+          <Text style={styles.hintDesc}>
+            {phase === 'camera'
+              ? 'Tekan pedal (Volume Bawah) untuk foto & baca No Mesin'
+              : phase === 'error'
+              ? 'Tekan pedal untuk foto ulang, atau perbaiki manual lalu OK'
+              : 'Memproses...'}
+          </Text>
+        )}
+      </TouchableOpacity>
 
       <ScanFeedback
         type="result"
-        message={resultText}
+        message={fullResult}
         visible={phase === 'result'}
       />
     </View>
@@ -218,74 +270,72 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-    padding: 16,
+    paddingHorizontal: Spacing.lg,
   },
   cameraArea: {
     flex: 1,
-    borderRadius: 20,
+    borderRadius: Radius.lg,
     overflow: 'hidden',
-    marginBottom: 12,
+    marginBottom: Spacing.sm,
   },
   processingCard: {
     flex: 1,
-    backgroundColor: '#eff6ff',
-    borderRadius: 20,
+    backgroundColor: Colors.accentLight,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: Colors.accent,
   },
   processingText: {
-    fontFamily: Fonts.heading.semiBold,
-    fontSize: 18,
-    color: Colors.primary,
+    ...Typography.h3,
+    color: Colors.accent,
   },
   doneCard: {
     flex: 1,
-    backgroundColor: '#dcfce7',
-    borderRadius: 20,
+    backgroundColor: Colors.successLight,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#16a34a',
+    borderColor: Colors.success,
     gap: 8,
   },
   resultValue: {
-    fontFamily: Fonts.heading.bold,
-    fontSize: 28,
-    color: '#16a34a',
+    fontFamily: 'JetBrainsMono-Medium',
+    fontSize: 32,
+    lineHeight: 40,
+    color: Colors.success,
+    letterSpacing: 2,
   },
   dealerName: {
-    fontFamily: Fonts.body.medium,
-    fontSize: 15,
-    color: '#15803d',
+    ...Typography.h3,
+    color: Colors.success,
     textAlign: 'center',
     paddingHorizontal: 16,
   },
   errorCard: {
     flex: 1,
-    backgroundColor: '#fef2f2',
-    borderRadius: 20,
+    backgroundColor: Colors.errorLight,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: Colors.destructive,
+    borderColor: Colors.error,
     gap: 8,
     paddingHorizontal: 16,
   },
   errorText: {
-    fontFamily: Fonts.heading.semiBold,
-    fontSize: 18,
-    color: Colors.destructive,
+    ...Typography.h3,
+    color: Colors.error,
     textAlign: 'center',
   },
   manualSection: {
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   manualLabel: {
-    fontFamily: Fonts.body.medium,
-    fontSize: 14,
-    color: Colors.neutral,
+    ...Typography.label,
+    color: Colors.textSecondary,
     marginBottom: 8,
   },
   inputRow: {
@@ -294,46 +344,58 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontFamily: Fonts.body.regular,
+    fontFamily: 'JetBrainsMono-Regular',
     fontSize: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    color: Colors.neutral,
+    color: Colors.textPrimary,
     borderWidth: 1,
     borderColor: Colors.border,
   },
   submitBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 12,
+    backgroundColor: Colors.accent,
+    borderRadius: Radius.md,
     paddingHorizontal: 20,
     justifyContent: 'center',
   },
   submitBtnText: {
-    fontFamily: Fonts.heading.semiBold,
+    ...Typography.label,
     fontSize: 16,
-    color: Colors.onPrimary,
+    color: Colors.textOnAccent,
+    fontFamily: 'Inter-SemiBold',
   },
   hintCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border,
+    marginTop: Spacing.sm,
+  },
+  hintHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   hintTitle: {
-    fontFamily: Fonts.heading.bold,
-    fontSize: 18,
-    color: Colors.primary,
-    marginBottom: 2,
+    ...Typography.label,
+    fontSize: 15,
+    color: Colors.textPrimary,
+    fontFamily: 'Inter-SemiBold',
+    flex: 1,
+  },
+  hintChevron: {
+    ...Typography.label,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginLeft: 8,
   },
   hintDesc: {
-    fontFamily: Fonts.body.regular,
-    fontSize: 13,
-    color: Colors.neutral,
-    opacity: 0.6,
-    textAlign: 'center',
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
+    marginTop: 6,
+    textAlign: 'left',
   },
 });

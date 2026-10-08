@@ -23,9 +23,9 @@ import CollapsibleTopAppBar, {
 import {NotificationIcon, MoreIcon, CameraIcon} from '../../components/TabIcons';
 import {useTabNav} from '../../contexts/TabNavContext';
 import {getActivity, type ActivityResponse} from '../../api/endpoints';
-import {Colors, Fonts} from '../../constants';
+import {Colors, Typography, Spacing, Radius} from '../../constants';
 
-const PROGRESS_BAR_HEIGHT = 12;
+const PROGRESS_BAR_HEIGHT = 8;
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -85,12 +85,12 @@ export default function HomeScreen() {
   return (
     <View style={styles.screen}>
       <CollapsibleTopAppBar
-        title="MABPKB"
-        subtitle="Scan Dokumen BPKB"
+        title="ACIAX"
+        subtitle="BPKB Scanner"
         scrollY={scrollY}
         actions={[
-          {icon: <NotificationIcon color={Colors.neutral} />, onPress: () => {}, accessibilityLabel: 'Notifikasi'},
-          {icon: <MoreIcon color={Colors.neutral} />, onPress: () => {}, accessibilityLabel: 'Menu'},
+          {icon: <NotificationIcon color={Colors.textPrimary} />, onPress: () => {}, accessibilityLabel: 'Notifikasi'},
+          {icon: <MoreIcon color={Colors.textPrimary} />, onPress: () => {}, accessibilityLabel: 'Menu'},
         ]}
       />
 
@@ -101,25 +101,20 @@ export default function HomeScreen() {
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />
         }>
         <Animated.View style={[styles.content, contentFade]}>
-          <View style={styles.progressCard}>
-            <View style={styles.progressHeader}>
-              <Text style={styles.progressRatio}>
-                {completed} / {target} BPKB
-              </Text>
-              <Animated.Text style={[styles.progressPct, percentage]}>
-                {pct}%
-              </Animated.Text>
-            </View>
-
-            <View style={styles.progressTrack}>
-              <Animated.View style={[styles.progressFill, progressWidth]} />
-            </View>
-
-            <Text style={styles.progressCaption}>Target bulan ini tercapai</Text>
+          <View style={styles.heroSection}>
+            <Text style={styles.heroNumber}>{completed}</Text>
+            <Text style={styles.heroLabel}>dari {target} BPKB hari ini</Text>
           </View>
+
+          <View style={styles.progressTrack}>
+            <Animated.View style={[styles.progressFill, progressWidth]} />
+          </View>
+          <Animated.Text style={[styles.progressPct, percentage]}>
+            {pct}%
+          </Animated.Text>
 
           <View style={styles.statsRow}>
             <View style={[styles.statCard, styles.statCardSuccess]}>
@@ -137,9 +132,9 @@ export default function HomeScreen() {
 
           <TouchableOpacity
             style={styles.ctaButton}
-            activeOpacity={0.85}
+            activeOpacity={0.9}
             onPress={() => setActiveTab(1)}>
-            <CameraIcon size={22} color={Colors.onPrimary} />
+            <CameraIcon size={22} color={Colors.textOnAccent} />
             <Text style={styles.ctaText}>Mulai Scan BPKB</Text>
           </TouchableOpacity>
         </Animated.View>
@@ -157,67 +152,53 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingHorizontal: 20,
-    gap: 16,
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.lg,
   },
   scrollContent: {
     paddingBottom: 120,
   },
-  progressCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 2,
+  heroSection: {
+    alignItems: 'center',
+    paddingTop: Spacing.xxxl,
   },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: 14,
+  heroNumber: {
+    fontFamily: 'JetBrainsMono-Medium',
+    fontSize: 64,
+    lineHeight: 72,
+    color: Colors.textPrimary,
   },
-  progressRatio: {
-    fontFamily: Fonts.heading.bold,
-    fontSize: 22,
-    color: Colors.primary,
-  },
-  progressPct: {
-    fontFamily: Fonts.heading.bold,
-    fontSize: 28,
-    color: Colors.primary,
+  heroLabel: {
+    ...Typography.body,
+    color: Colors.textSecondary,
+    marginTop: Spacing.xs,
   },
   progressTrack: {
     height: PROGRESS_BAR_HEIGHT,
     borderRadius: PROGRESS_BAR_HEIGHT / 2,
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.borderLight,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
     borderRadius: PROGRESS_BAR_HEIGHT / 2,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
   },
-  progressCaption: {
-    fontFamily: Fonts.body.regular,
-    fontSize: 13,
-    color: Colors.neutral,
-    opacity: 0.5,
-    marginTop: 10,
+  progressPct: {
+    fontFamily: 'JetBrainsMono-Medium',
+    fontSize: 14,
+    color: Colors.accent,
+    textAlign: 'right',
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: Spacing.md,
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    padding: Spacing.xl,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
@@ -229,47 +210,46 @@ const styles = StyleSheet.create({
   },
   statCardSuccess: {
     borderLeftWidth: 3,
-    borderLeftColor: '#16a34a',
+    borderLeftColor: Colors.success,
   },
   statCardAccent: {
     borderLeftWidth: 3,
-    borderLeftColor: Colors.primary,
+    borderLeftColor: Colors.accent,
   },
   statNumber: {
-    fontFamily: Fonts.heading.bold,
+    fontFamily: 'JetBrainsMono-Medium',
     fontSize: 28,
-    color: Colors.neutral,
+    lineHeight: 36,
+    color: Colors.textPrimary,
   },
   statNumberSuccess: {
-    color: '#16a34a',
+    color: Colors.success,
   },
   statNumberAccent: {
-    color: Colors.primary,
+    color: Colors.accent,
   },
   statLabel: {
-    fontFamily: Fonts.body.medium,
-    fontSize: 13,
-    color: Colors.neutral,
-    opacity: 0.6,
+    ...Typography.label,
+    color: Colors.textSecondary,
     marginTop: 4,
   },
   ctaButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.primary,
-    borderRadius: 16,
-    paddingVertical: 16,
+    backgroundColor: Colors.accent,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.xxl,
     gap: 10,
-    shadowColor: Colors.primary,
+    shadowColor: Colors.shadow,
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    elevation: 6,
+    marginTop: Spacing.md,
   },
   ctaText: {
-    fontFamily: Fonts.heading.semiBold,
-    fontSize: 16,
-    color: Colors.onPrimary,
+    ...Typography.button,
+    color: Colors.textOnAccent,
   },
 });

@@ -26,8 +26,8 @@ function NavigatorContent() {
 
   const tabs = tabsConfig.map(t => ({
     key: t.key,
-    icon: <t.Icon color={t.key === 'scan' ? undefined : Colors.neutral} />,
-    iconActive: <t.Icon color={t.key === 'scan' ? undefined : Colors.onPrimary} />,
+    icon: <t.Icon color={t.key === 'scan' ? undefined : Colors.textSecondary} />,
+    iconActive: <t.Icon color={t.key === 'scan' ? undefined : Colors.textOnAccent} />,
     onPress: () => setActiveTab(t.tab),
   })) as [
     {key: string; icon: React.ReactNode; iconActive: React.ReactNode; onPress: () => void},

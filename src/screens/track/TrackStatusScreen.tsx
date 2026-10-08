@@ -25,7 +25,7 @@ import {NotificationIcon, CheckIcon, XIcon, CameraIcon} from '../../components/T
 import {useTabNav} from '../../contexts/TabNavContext';
 import {useBpkbStream} from '../../hooks/useBpkbStream';
 import {trackBpkb, type BpkbTrackResponse} from '../../api/endpoints';
-import {Colors, Fonts} from '../../constants';
+import {Colors, Typography, Spacing, Radius} from '../../constants';
 
 const STAGE_META: {key: string; label: string}[] = [
   {key: 'pending', label: 'Queued'},
@@ -114,7 +114,7 @@ export default function TrackStatusScreen() {
           scrollY={scrollY}
           onBack={() => setActiveTab(0)}
           actions={[
-            {icon: <NotificationIcon color={Colors.neutral} />, onPress: () => {}, accessibilityLabel: 'Notifikasi'},
+            {icon: <NotificationIcon color={Colors.textPrimary} />, onPress: () => {}, accessibilityLabel: 'Notifikasi'},
           ]}
         />
         <View style={[styles.emptyContainer, {paddingTop: EXPANDED_HEIGHT + insets.top}]}>
@@ -127,7 +127,7 @@ export default function TrackStatusScreen() {
               style={styles.scanButton}
               activeOpacity={0.85}
               onPress={() => setActiveTab(1)}>
-              <CameraIcon size={20} color={Colors.onPrimary} />
+              <CameraIcon size={20} color={Colors.textOnAccent} />
               <Text style={styles.scanButtonText}>Mulai Scan BPKB</Text>
             </TouchableOpacity>
           </View>
@@ -144,7 +144,7 @@ export default function TrackStatusScreen() {
         scrollY={scrollY}
         onBack={() => setActiveTab(0)}
         actions={[
-          {icon: <NotificationIcon color={Colors.neutral} />, onPress: () => {}, accessibilityLabel: 'Notifikasi'},
+          {icon: <NotificationIcon color={Colors.textPrimary} />, onPress: () => {}, accessibilityLabel: 'Notifikasi'},
         ]}
       />
 
@@ -155,7 +155,7 @@ export default function TrackStatusScreen() {
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />
         }>
         <View style={styles.content}>
           {trackDetail && (
@@ -183,8 +183,8 @@ export default function TrackStatusScreen() {
                         isActive && styles.stepDotActive,
                         isCurrentFailed && styles.stepDotFailed,
                       ]}>
-                      {isDone && <CheckIcon size={14} color="#FFFFFF" />}
-                      {isCurrentFailed && <XIcon size={14} color="#FFFFFF" />}
+                      {isDone && <CheckIcon size={14} color={Colors.surface} />}
+                      {isCurrentFailed && <XIcon size={14} color={Colors.surface} />}
                       {isActive && <Animated.View style={[styles.stepPulse, pulseStyle]} />}
                     </View>
                     {idx < STAGE_META.length - 1 && (
@@ -252,7 +252,7 @@ export default function TrackStatusScreen() {
                 setTrackDetail(null);
                 setActiveTab(1);
               }}>
-              <CameraIcon size={20} color={Colors.onPrimary} />
+              <CameraIcon size={20} color={Colors.textOnPrimary} />
               <Text style={styles.newScanButtonText}>Scan BPKB Lagi</Text>
             </TouchableOpacity>
           )}
@@ -280,8 +280,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingHorizontal: 20,
-    gap: 16,
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.lg,
   },
   scrollContent: {
     paddingBottom: 120,
@@ -290,28 +290,25 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: Spacing.xxxl,
   },
   emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 32,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.xxxl,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
-    gap: 12,
+    gap: Spacing.md,
     width: '100%',
   },
   emptyTitle: {
-    fontFamily: Fonts.heading.bold,
-    fontSize: 18,
-    color: Colors.neutral,
+    ...Typography.h3,
+    color: Colors.textPrimary,
   },
   emptyDesc: {
-    fontFamily: Fonts.body.regular,
-    fontSize: 14,
-    color: Colors.neutral,
-    opacity: 0.5,
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -319,22 +316,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    backgroundColor: Colors.accent,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xxl,
     gap: 8,
     marginTop: 8,
   },
   scanButtonText: {
-    fontFamily: Fonts.heading.semiBold,
+    ...Typography.button,
+    color: Colors.textOnAccent,
     fontSize: 15,
-    color: Colors.onPrimary,
   },
   detailCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.xl,
     borderWidth: 1,
     borderColor: Colors.border,
     shadowColor: '#000',
@@ -342,26 +339,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 12,
     elevation: 2,
-    gap: 12,
+    gap: Spacing.md,
   },
   detailRow: {
     gap: 2,
   },
   detailLabel: {
-    fontFamily: Fonts.body.medium,
-    fontSize: 12,
-    color: Colors.neutral,
-    opacity: 0.5,
+    ...Typography.labelSmall,
+    color: Colors.textSecondary,
   },
   detailValue: {
-    fontFamily: Fonts.heading.semiBold,
+    fontFamily: 'JetBrainsMono-Medium',
     fontSize: 16,
-    color: Colors.neutral,
+    lineHeight: 24,
+    color: Colors.textPrimary,
   },
   stepperCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.xxl,
     borderWidth: 1,
     borderColor: Colors.border,
     shadowColor: '#000',
@@ -371,10 +367,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   stepperTitle: {
-    fontFamily: Fonts.heading.semiBold,
-    fontSize: 16,
-    color: Colors.neutral,
-    marginBottom: 20,
+    ...Typography.h3,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xl,
   },
   stepRow: {
     flexDirection: 'row',
@@ -388,29 +383,29 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.borderLight,
     borderWidth: 2,
     borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepDotDone: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
+    backgroundColor: Colors.success,
+    borderColor: Colors.success,
   },
   stepDotActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
   },
   stepDotFailed: {
-    backgroundColor: Colors.destructive,
-    borderColor: Colors.destructive,
+    backgroundColor: Colors.error,
+    borderColor: Colors.error,
   },
   stepPulse: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
   },
   stepLine: {
     flex: 1,
@@ -419,107 +414,102 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   stepLineDone: {
-    backgroundColor: '#16a34a',
+    backgroundColor: Colors.success,
   },
   stepLineFailed: {
-    backgroundColor: Colors.destructive,
+    backgroundColor: Colors.error,
     opacity: 0.3,
   },
   stepContent: {
     flex: 1,
-    paddingLeft: 12,
-    paddingBottom: 20,
+    paddingLeft: Spacing.md,
+    paddingBottom: Spacing.xl,
     justifyContent: 'center',
   },
   stepLabel: {
-    fontFamily: Fonts.body.medium,
+    ...Typography.label,
     fontSize: 15,
   },
   stepLabelDone: {
-    color: '#16a34a',
+    color: Colors.success,
   },
   stepLabelActive: {
-    fontFamily: Fonts.body.semiBold,
-    color: Colors.primary,
+    ...Typography.label,
+    fontSize: 15,
+    color: Colors.accent,
+    fontFamily: 'Inter-SemiBold',
   },
   stepLabelFailed: {
-    color: Colors.destructive,
-    fontFamily: Fonts.body.semiBold,
+    color: Colors.error,
+    fontFamily: 'Inter-SemiBold',
   },
   stepLabelPending: {
-    color: Colors.neutral,
+    color: Colors.textSecondary,
     opacity: 0.35,
   },
   stepHint: {
-    fontFamily: Fonts.body.regular,
-    fontSize: 12,
-    color: Colors.primary,
-    opacity: 0.7,
+    ...Typography.labelSmall,
+    color: Colors.accent,
     marginTop: 2,
   },
   stepHintFailed: {
-    fontFamily: Fonts.body.regular,
-    fontSize: 12,
-    color: Colors.destructive,
-    opacity: 0.7,
+    ...Typography.labelSmall,
+    color: Colors.error,
     marginTop: 2,
   },
   pdfButton: {
-    backgroundColor: '#16a34a',
-    borderRadius: 16,
-    paddingVertical: 16,
+    backgroundColor: Colors.success,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.lg,
     alignItems: 'center',
-    shadowColor: '#16a34a',
+    shadowColor: Colors.success,
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
   pdfButtonText: {
-    fontFamily: Fonts.heading.semiBold,
-    fontSize: 16,
-    color: '#FFFFFF',
+    ...Typography.button,
+    color: Colors.surface,
   },
   errorCard: {
-    backgroundColor: '#fef2f2',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: Colors.errorLight,
+    borderRadius: Radius.md,
+    padding: Spacing.xl,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: Colors.error,
   },
   errorTitle: {
-    fontFamily: Fonts.heading.semiBold,
+    ...Typography.label,
     fontSize: 14,
-    color: Colors.destructive,
+    color: Colors.error,
+    fontFamily: 'Inter-SemiBold',
     marginBottom: 6,
   },
   errorText: {
-    fontFamily: Fonts.body.regular,
-    fontSize: 14,
-    color: Colors.destructive,
+    ...Typography.bodySmall,
+    color: Colors.error,
     lineHeight: 20,
   },
   waitingCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    padding: Spacing.xl,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
   },
   waitingText: {
-    fontFamily: Fonts.body.regular,
-    fontSize: 14,
-    color: Colors.neutral,
-    opacity: 0.5,
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
   },
   newScanButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.primary,
-    borderRadius: 16,
-    paddingVertical: 16,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.lg,
     gap: 8,
     shadowColor: Colors.primary,
     shadowOffset: {width: 0, height: 4},
@@ -528,8 +518,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   newScanButtonText: {
-    fontFamily: Fonts.heading.semiBold,
-    fontSize: 16,
-    color: Colors.onPrimary,
+    ...Typography.button,
+    color: Colors.textOnPrimary,
   },
 });

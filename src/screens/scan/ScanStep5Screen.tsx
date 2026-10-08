@@ -4,8 +4,8 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  ActivityIndicator,
   Pressable,
+  TouchableOpacity,
 } from 'react-native';
 import {
   Camera,
@@ -16,14 +16,17 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ScanStackParamList} from '../../navigation/types';
-import {Colors, Fonts} from '../../constants';
+import LottieView from 'lottie-react-native';
+import {Colors, Typography, Spacing, Radius} from '../../constants';
 import {useScan} from '../../contexts/ScanContext';
 import {useTabNav} from '../../contexts/TabNavContext';
 import {useAlert} from '../../contexts/AlertContext';
 import {useSound} from '../../hooks/useSound';
+import {useHaptic} from '../../hooks/useHaptic';
 import {useHardwareKey} from '../../hooks/useHardwareKey';
 import {processBpkb} from '../../api';
 import ScanStepIndicator from '../../components/ScanStepIndicator';
+import ThumbnailStrip from '../../components/ThumbnailStrip';
 import DocumentOverlay from '../../components/DocumentOverlay';
 import {CheckIcon, XIcon} from '../../components/TabIcons';
 
@@ -45,10 +48,12 @@ export default function ScanStep5Screen({navigation}: Props) {
   const {state, setNobpkb, resetScan} = useScan();
   const {setActiveTab, setPendingTrackId} = useTabNav();
   const {showAlert} = useAlert();
-  const {play} = useSound();
+  const {play: playSound} = useSound();
+  const {trigger: haptic} = useHaptic();
   const device = useCameraDevice('back');
   const {hasPermission, requestPermission} = useCameraPermission();
   const [phase, setPhase] = useState<Phase>('scanning');
+  const [hintExpanded, setHintExpanded] = useState(true);
   const [resultText, setResultText] = useState('');
   const [manualInput, setManualInput] = useState('');
   const [errorText, setErrorText] = useState('');
@@ -68,7 +73,8 @@ export default function ScanStep5Screen({navigation}: Props) {
       }
       if (!state.photo1 || !state.photo2 || !state.photo3 || !state.photo4) {
         setErrorText('Foto belum lengkap. Ulangi scan dari awal.');
-        play('error');
+        haptic('error');
+        playSound('error');
         setPhase('submitError');
         return;
       }
@@ -83,7 +89,8 @@ export default function ScanStep5Screen({navigation}: Props) {
           state.photo4,
         ]);
 
-        play('submit');
+        haptic('submit');
+        playSound('submit');
         showAlert({
           title: 'Berhasil',
           message: `BPKB sedang diproses.\nTrack ID: ${result.track_id}`,
@@ -107,23 +114,25 @@ export default function ScanStep5Screen({navigation}: Props) {
           ? Object.values(error.data.errors).flat().join('\n')
           : error?.data?.message || 'Gagal mengirim ke server.';
         setErrorText(message);
-        play('error');
+        haptic('error');
+        playSound('error');
         setPhase('submitError');
       } finally {
         isSubmittingRef.current = false;
       }
     },
-    [navigation, play, resetScan, setActiveTab, setPendingTrackId, showAlert, state],
+    [navigation, playSound, haptic, resetScan, setActiveTab, setPendingTrackId, showAlert, state],
   );
 
   const acceptNobpkb = useCallback(
     (value: string) => {
       setNobpkb(value);
       setResultText(value);
-      play('success');
+      haptic('detect');
+      playSound('beep');
       setPhase('confirm');
     },
-    [play, setNobpkb],
+    [playSound, haptic, setNobpkb],
   );
 
   const codeScanner = useCodeScanner({
@@ -179,7 +188,7 @@ export default function ScanStep5Screen({navigation}: Props) {
   );
 
   return (
-    <View style={[styles.container, {paddingBottom: 24 + insets.bottom}]}>
+    <View style={[styles.container, {paddingBottom: Spacing.xxl + insets.bottom}]}>
       <ScanStepIndicator currentStep={5} totalSteps={5} />
 
       <View style={styles.cameraArea}>
@@ -196,7 +205,7 @@ export default function ScanStep5Screen({navigation}: Props) {
         )}
         {phase === 'confirm' && (
           <View style={styles.doneCard}>
-            <CheckIcon size={48} color="#16a34a" />
+            <CheckIcon size={48} color={Colors.success} />
             <Text style={styles.resultValue}>{resultText}</Text>
             <View style={styles.summary}>
               <Text style={styles.summaryLine}>
@@ -210,13 +219,18 @@ export default function ScanStep5Screen({navigation}: Props) {
         )}
         {phase === 'submitting' && (
           <View style={styles.processingCard}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.processingText}>Mengirim...</Text>
+            <LottieView
+              source={require('../../assets/lottie/business.json')}
+              autoPlay
+              loop
+              style={styles.lottieRocket}
+            />
+            <Text style={styles.processingText}>Cuuusss Terbang...</Text>
           </View>
         )}
         {phase === 'submitError' && (
           <View style={styles.errorCard}>
-            <XIcon size={48} color={Colors.destructive} />
+            <XIcon size={48} color={Colors.error} />
             <Text style={styles.errorText}>{errorText}</Text>
           </View>
         )}
@@ -242,18 +256,30 @@ export default function ScanStep5Screen({navigation}: Props) {
         </View>
       )}
 
-      <View style={styles.hintCard}>
-        <Text style={styles.hintTitle}>Barcode</Text>
-        <Text style={styles.hintDesc}>
-          {phase === 'scanning'
-            ? 'Arahkan kamera ke barcode BPKB'
-            : phase === 'confirm'
-            ? 'Tekan pedal untuk KIRIM, Volume Atas untuk ulang'
-            : phase === 'submitError'
-            ? 'Tekan pedal untuk kirim ulang, Volume Atas untuk ulang scan'
-            : 'Memproses...'}
-        </Text>
-      </View>
+      <ThumbnailStrip currentStep={5} />
+
+      <TouchableOpacity
+        style={styles.hintCard}
+        onPress={() => setHintExpanded(h => !h)}
+        activeOpacity={0.8}>
+        <View style={styles.hintHeader}>
+          <Text style={styles.hintTitle} numberOfLines={1}>
+            Barcode
+          </Text>
+          <Text style={styles.hintChevron}>{hintExpanded ? '▾' : '▸'}</Text>
+        </View>
+        {hintExpanded && (
+          <Text style={styles.hintDesc}>
+            {phase === 'scanning'
+              ? 'Arahkan kamera ke barcode BPKB'
+              : phase === 'confirm'
+              ? 'Tekan pedal untuk KIRIM, Volume Atas untuk ulang'
+              : phase === 'submitError'
+              ? 'Tekan pedal untuk kirim ulang, Volume Atas untuk ulang scan'
+              : 'Memproses...'}
+          </Text>
+        )}
+      </TouchableOpacity>
     </View>
   );
 }
@@ -262,44 +288,48 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-    padding: 16,
+    paddingHorizontal: Spacing.lg,
   },
   cameraArea: {
     flex: 1,
-    borderRadius: 20,
+    borderRadius: Radius.lg,
     overflow: 'hidden',
-    marginBottom: 12,
+    marginBottom: Spacing.sm,
   },
   processingCard: {
     flex: 1,
-    backgroundColor: '#eff6ff',
-    borderRadius: 20,
+    backgroundColor: Colors.accentLight,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: Colors.accent,
     gap: 12,
   },
+  lottieRocket: {
+    width: 120,
+    height: 120,
+  },
   processingText: {
-    fontFamily: Fonts.heading.semiBold,
-    fontSize: 18,
-    color: Colors.primary,
+    ...Typography.h3,
+    color: Colors.accent,
   },
   doneCard: {
     flex: 1,
-    backgroundColor: '#dcfce7',
-    borderRadius: 20,
+    backgroundColor: Colors.successLight,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#16a34a',
+    borderColor: Colors.success,
     gap: 8,
     paddingHorizontal: 16,
   },
   resultValue: {
-    fontFamily: Fonts.heading.bold,
+    fontFamily: 'JetBrainsMono-Medium',
     fontSize: 24,
-    color: '#16a34a',
+    lineHeight: 32,
+    color: Colors.success,
     textAlign: 'center',
   },
   summary: {
@@ -307,35 +337,32 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   summaryLine: {
-    fontFamily: Fonts.body.medium,
-    fontSize: 14,
-    color: '#15803d',
+    ...Typography.bodySmall,
+    color: Colors.success,
     textAlign: 'center',
   },
   errorCard: {
     flex: 1,
-    backgroundColor: '#fef2f2',
-    borderRadius: 20,
+    backgroundColor: Colors.errorLight,
+    borderRadius: Radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: Colors.destructive,
+    borderColor: Colors.error,
     gap: 8,
     paddingHorizontal: 16,
   },
   errorText: {
-    fontFamily: Fonts.heading.semiBold,
-    fontSize: 16,
-    color: Colors.destructive,
+    ...Typography.h3,
+    color: Colors.error,
     textAlign: 'center',
   },
   manualSection: {
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   manualLabel: {
-    fontFamily: Fonts.body.medium,
-    fontSize: 14,
-    color: Colors.neutral,
+    ...Typography.label,
+    color: Colors.textSecondary,
     marginBottom: 8,
   },
   inputRow: {
@@ -344,46 +371,58 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontFamily: Fonts.body.regular,
+    fontFamily: 'JetBrainsMono-Regular',
     fontSize: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    color: Colors.neutral,
+    color: Colors.textPrimary,
     borderWidth: 1,
     borderColor: Colors.border,
   },
   submitBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 12,
+    backgroundColor: Colors.accent,
+    borderRadius: Radius.md,
     paddingHorizontal: 20,
     justifyContent: 'center',
   },
   submitBtnText: {
-    fontFamily: Fonts.heading.semiBold,
+    ...Typography.label,
     fontSize: 16,
-    color: Colors.onPrimary,
+    color: Colors.textOnAccent,
+    fontFamily: 'Inter-SemiBold',
   },
   hintCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border,
+    marginTop: Spacing.sm,
+  },
+  hintHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   hintTitle: {
-    fontFamily: Fonts.heading.bold,
-    fontSize: 18,
-    color: Colors.primary,
-    marginBottom: 2,
+    ...Typography.label,
+    fontSize: 15,
+    color: Colors.textPrimary,
+    fontFamily: 'Inter-SemiBold',
+    flex: 1,
+  },
+  hintChevron: {
+    ...Typography.label,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginLeft: 8,
   },
   hintDesc: {
-    fontFamily: Fonts.body.regular,
-    fontSize: 13,
-    color: Colors.neutral,
-    opacity: 0.6,
-    textAlign: 'center',
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
+    marginTop: 6,
+    textAlign: 'left',
   },
 });

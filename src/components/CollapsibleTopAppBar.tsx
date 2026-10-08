@@ -10,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Path, Svg} from 'react-native-svg';
-import {Colors, Fonts} from '../constants';
+import {Colors, Fonts, Typography} from '../constants';
 
 export const COLLAPSED_HEIGHT = 56;
 export const EXPANDED_HEIGHT = 140;
@@ -105,9 +105,9 @@ export default function CollapsibleTopAppBar({
       Extrapolation.CLAMP,
     );
     return {
-      backgroundColor: `rgba(248, 250, 252, ${progress})`,
+      backgroundColor: `rgba(247, 244, 239, ${progress})`,
       borderBottomWidth: progress > 0.8 ? StyleSheet.hairlineWidth : 0,
-      borderBottomColor: `rgba(228, 229, 231, ${progress})`,
+      borderBottomColor: `rgba(232, 226, 216, ${progress})`,
     };
   });
 
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: Fonts.heading.semiBold,
     fontSize: 18,
-    color: Colors.neutral,
+    color: Colors.textPrimary,
     textAlign: 'center',
     marginHorizontal: 8,
   },
@@ -239,8 +239,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: Fonts.body.regular,
     fontSize: 14,
-    color: Colors.neutral,
-    opacity: 0.6,
+    color: Colors.textSecondary,
     marginTop: 2,
   },
   backButton: {
@@ -249,7 +248,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 35, 102, 0.08)',
+    backgroundColor: 'rgba(212, 165, 74, 0.12)',
   },
   actionButton: {
     width: TOOLBAR_ICON_SIZE,

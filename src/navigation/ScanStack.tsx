@@ -29,7 +29,11 @@ function ScanStep1Wrapper(props: any) {
 export default function ScanStack() {
   return (
     <PedalProvider>
-      <Stack.Navigator screenOptions={{headerShown: false}}>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          animation: 'slide_from_right',
+        }}>
         <Stack.Screen name="ScanStep1" component={ScanStep1Wrapper} />
         <Stack.Screen name="ScanStep2" component={ScanStep2Screen} />
         <Stack.Screen name="ScanStep3" component={ScanStep3Screen} />
