@@ -1,10 +1,12 @@
 import React, {useRef, useState, useEffect, useCallback} from 'react';
-import {View, StyleSheet} from 'react-native';
+import {View, StyleSheet, AppState, AppStateStatus} from 'react-native';
 import {
   Camera,
+  CameraRuntimeError,
   useCameraDevice,
   useCameraPermission,
 } from 'react-native-vision-camera';
+import {useIsFocused} from '@react-navigation/native';
 import {usePedal} from '../contexts/PedalContext';
 import {useSound} from '../hooks/useSound';
 import type {ScanImage} from '../contexts/ScanContext';
@@ -19,6 +21,7 @@ interface PedalCameraProps {
   filename: string;
   onCapture: (img: ScanImage) => void;
   overlayVariant?: OverlayVariant;
+  isActive?: boolean;
 }
 
 const FEEDBACK_DURATION_MS = 1200;
@@ -27,17 +30,31 @@ export default function PedalCamera({
   filename,
   onCapture,
   overlayVariant = 'document',
+  isActive: propIsActive = true,
 }: PedalCameraProps) {
   const cameraRef = useRef<Camera>(null);
   const device = useCameraDevice('back');
   const {hasPermission, requestPermission} = useCameraPermission();
   const {play} = useSound();
   const {register, unregister} = usePedal();
+  const isFocused = useIsFocused();
+  const [isForeground, setIsForeground] = useState(
+    AppState.currentState === 'active',
+  );
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error';
     msg: string;
   } | null>(null);
   const isCapturingRef = useRef(false);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (status: AppStateStatus) => {
+      setIsForeground(status === 'active');
+    });
+    return () => sub.remove();
+  }, []);
+
+  const isActive = propIsActive && isFocused && isForeground;
 
   useEffect(() => {
     if (!hasPermission) {
@@ -46,7 +63,7 @@ export default function PedalCamera({
   }, [hasPermission, requestPermission]);
 
   const handleCapture = useCallback(async () => {
-    if (isCapturingRef.current || !cameraRef.current) {
+    if (isCapturingRef.current || !cameraRef.current || !isActive) {
       return;
     }
     isCapturingRef.current = true;
@@ -81,18 +98,20 @@ export default function PedalCamera({
       setFeedback({type: 'error', msg: 'Gagal mengambil foto'});
       isCapturingRef.current = false;
     }
-  }, [filename, onCapture, play]);
+  }, [filename, onCapture, play, isActive]);
 
   const captureRef = useRef(handleCapture);
   captureRef.current = handleCapture;
 
   useEffect(() => {
-    if (!hasPermission || device == null) {
+    if (!hasPermission || device == null || !isActive) {
       return;
     }
     register(() => captureRef.current());
     return () => unregister();
-  }, [hasPermission, device, register, unregister]);
+  }, [hasPermission, device, register, unregister, isActive]);
+
+  const handleCameraError = useCallback((_error: CameraRuntimeError) => {}, []);
 
   if (!hasPermission || device == null) {
     return <View style={styles.container} />;
@@ -104,8 +123,10 @@ export default function PedalCamera({
         ref={cameraRef}
         style={StyleSheet.absoluteFill}
         device={device}
-        isActive={true}
+        isActive={isActive}
         photo={true}
+        androidPreviewViewType="texture-view"
+        onError={handleCameraError}
       />
       {overlayVariant !== 'none' && <DocumentOverlay variant={overlayVariant} />}
       <ScanFeedback
