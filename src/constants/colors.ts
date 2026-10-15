@@ -21,8 +21,6 @@ export const Colors = {
   destructive: '#C44B4B',
   dim: 'rgba(45,45,45,0.18)',
   shadow: 'rgba(212,165,74,0.35)',
-  /** @deprecated — use textPrimary */
   neutral: '#1A1A1A',
-  /** @deprecated — use borderLight */
   secondary: '#F0EBE4',
 } as const;

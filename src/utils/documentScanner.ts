@@ -3,15 +3,11 @@ import {
   Mat,
   Rect,
   Size,
-  MatVector,
   DataTypes,
-  ColorConversionCodes,
-  RetrievalModes,
-  ContourApproximationModes,
+  RotateFlags,
 } from 'react-native-fast-opencv';
 import RNFS from 'react-native-fs';
-
-const MIN_CONTOUR_AREA_RATIO = 0.15;
+import {calculateDocumentRoi} from './roiCalculator';
 
 export interface ScanResult {
   uri: string;
@@ -22,14 +18,6 @@ function uriToFilePath(uri: string): string {
   return uri.replace('file://', '');
 }
 
-/**
- * Deteksi border dokumen lalu crop ke bounding-box kontur terbesar.
- * Ini BUKAN perspective-warp penuh (belum ada koreksi skew/rotasi) —
- * sengaja disederhanakan karena belum bisa diverifikasi di device asli
- * (lihat diskus.md Bagian 6). Selalu fallback ke foto asli kalau contour
- * tidak ditemukan atau proses OpenCV gagal, sesuai aturan "jangan block
- * proses" — tidak pernah melempar error ke pemanggil.
- */
 export async function processScanImage(uri: string): Promise<ScanResult> {
   const releasables: Array<{release: () => void}> = [];
   const track = <T extends {release: () => void}>(obj: T): T => {
@@ -40,9 +28,7 @@ export async function processScanImage(uri: string): Promise<ScanResult> {
     for (const obj of releasables) {
       try {
         obj.release();
-      } catch {
-        // ignore — best-effort native cleanup
-      }
+      } catch {}
     }
   };
 
@@ -57,57 +43,49 @@ export async function processScanImage(uri: string): Promise<ScanResult> {
       return {uri, borderDetected: false};
     }
 
-    const totalArea = src.cols * src.rows;
+    let workingMat = src;
+    if (src.cols > src.rows) {
+      const rotated = track(Mat.create(src.cols, src.rows, DataTypes.CV_8UC3));
+      OpenCV.rotate(src, rotated, RotateFlags.ROTATE_90_COUNTERCLOCKWISE);
+      workingMat = rotated;
+    }
 
-    const gray = track(Mat.create(src.rows, src.cols, DataTypes.CV_8UC1));
-    OpenCV.cvtColor(src, gray, ColorConversionCodes.COLOR_BGR2GRAY);
+    const roi = calculateDocumentRoi(workingMat.cols, workingMat.rows);
+    const targetRect = track(Rect.create(roi.x, roi.y, roi.width, roi.height));
 
-    const blurSize = track(Size.create(5, 5));
-    const blurred = track(Mat.create(gray.rows, gray.cols, DataTypes.CV_8UC1));
-    OpenCV.GaussianBlur(gray, blurred, blurSize, 0);
-
-    const edges = track(Mat.create(gray.rows, gray.cols, DataTypes.CV_8UC1));
-    OpenCV.Canny(blurred, edges, 75, 200);
-
-    const contours = track(MatVector.create());
-    OpenCV.findContours(
-      edges,
-      contours,
-      RetrievalModes.RETR_LIST,
-      ContourApproximationModes.CHAIN_APPROX_SIMPLE,
+    const cropped = track(
+      Mat.create(roi.height, roi.width, DataTypes.CV_8UC3),
     );
+    OpenCV.crop(workingMat, cropped, targetRect);
 
-    let bestArea = 0;
-    let bestRect: Rect | null = null;
+    const blurred = track(
+      Mat.create(roi.height, roi.width, DataTypes.CV_8UC3),
+    );
+    const blurSize = track(Size.create(5, 5));
+    OpenCV.GaussianBlur(cropped, blurred, blurSize, 0);
 
-    for (let i = 0; i < contours.length; i++) {
-      const contour = contours.get(i);
-      const {value: area} = OpenCV.contourArea(contour, false);
-      if (area < totalArea * MIN_CONTOUR_AREA_RATIO || area <= bestArea) {
-        continue;
-      }
-      bestArea = area;
-      bestRect = OpenCV.boundingRect(contour);
-    }
+    const sharpened = track(
+      Mat.create(roi.height, roi.width, DataTypes.CV_8UC3),
+    );
+    OpenCV.addWeighted(cropped, 1.4, blurred, -0.4, 0, sharpened);
 
-    if (!bestRect) {
-      releaseAll();
-      return {uri, borderDetected: false};
-    }
-    track(bestRect);
-
-    const cropped = track(Mat.create(bestRect.height, bestRect.width, DataTypes.CV_8UC3));
-    OpenCV.crop(src, cropped, bestRect);
-
-    const enhanced = track(Mat.create(bestRect.height, bestRect.width, DataTypes.CV_8UC3));
-    OpenCV.convertScaleAbs(cropped, enhanced, 1.15, 8);
+    const enhanced = track(
+      Mat.create(roi.height, roi.width, DataTypes.CV_8UC3),
+    );
+    OpenCV.convertScaleAbs(sharpened, enhanced, 1.35, -28);
 
     const outputPath = uriToFilePath(uri).replace(/\.jpe?g$/i, '_scan.jpg');
-    enhanced.saveToFile(outputPath);
-    releaseAll();
+    try {
+      (enhanced as any).saveToFile(outputPath, 'jpeg', 0.9, 0);
+    } catch {
+      const outputBase64 = (enhanced as any).toBase64('jpeg');
+      await RNFS.writeFile(outputPath, outputBase64, 'base64');
+    }
 
+    releaseAll();
     return {uri: `file://${outputPath}`, borderDetected: true};
-  } catch {
+  } catch (err) {
+    console.error(err);
     releaseAll();
     return {uri, borderDetected: false};
   }

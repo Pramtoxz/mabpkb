@@ -8,7 +8,14 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import {Colors, Typography} from '../constants';
+import {
+  Colors,
+  Typography,
+  DOCUMENT_ASPECT_RATIO,
+  DOCUMENT_VIEWPORT_WIDTH_PERCENT,
+  BARCODE_ASPECT_RATIO,
+  BARCODE_VIEWPORT_WIDTH_PERCENT,
+} from '../constants';
 
 type OverlayVariant = 'document' | 'barcode';
 
@@ -21,12 +28,6 @@ const CORNER_LENGTH = 32;
 const CORNER_THICKNESS = 3;
 const CORNER_COLOR = Colors.accent;
 const CORNER_RADIUS = 4;
-
-const DOCUMENT_RATIO = 1.414;
-const DOCUMENT_WIDTH_PERCENT = 0.82;
-
-const BARCODE_RATIO = 0.35;
-const BARCODE_WIDTH_PERCENT = 0.75;
 
 function CornerMarkers() {
   return (
@@ -71,8 +72,10 @@ export default function DocumentOverlay({variant = 'document', label}: DocumentO
   }));
 
   const isBarcode = variant === 'barcode';
-  const widthPercent = isBarcode ? BARCODE_WIDTH_PERCENT : DOCUMENT_WIDTH_PERCENT;
-  const ratio = isBarcode ? BARCODE_RATIO : DOCUMENT_RATIO;
+  const widthPercent = isBarcode
+    ? BARCODE_VIEWPORT_WIDTH_PERCENT
+    : DOCUMENT_VIEWPORT_WIDTH_PERCENT;
+  const ratio = isBarcode ? BARCODE_ASPECT_RATIO : DOCUMENT_ASPECT_RATIO;
 
   const cutoutWidth = screenWidth * widthPercent;
   const cutoutHeight = cutoutWidth * ratio;
