@@ -64,10 +64,13 @@ export default function PhotoCaptureStep({
       <ScanStepIndicator currentStep={step} totalSteps={totalSteps} />
 
       <View style={styles.cameraArea}>
-        {phase === 'camera' ? (
-          <PedalCamera filename={filename} onCapture={handleCapture} />
-        ) : (
-          <View style={styles.doneCard}>
+        <PedalCamera
+          filename={filename}
+          onCapture={handleCapture}
+          isActive={phase === 'camera'}
+        />
+        {phase === 'done' && (
+          <View style={[StyleSheet.absoluteFill, styles.doneCard]}>
             <CheckIcon size={56} color={Colors.success} />
             <Text style={styles.doneText}>Foto {step} tersimpan</Text>
           </View>

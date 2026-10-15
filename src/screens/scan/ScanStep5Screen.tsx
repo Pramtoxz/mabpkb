@@ -6,13 +6,17 @@ import {
   StyleSheet,
   Pressable,
   TouchableOpacity,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import {
   Camera,
+  CameraRuntimeError,
   useCameraDevice,
   useCameraPermission,
   useCodeScanner,
 } from 'react-native-vision-camera';
+import {useIsFocused} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ScanStackParamList} from '../../navigation/types';
@@ -59,6 +63,20 @@ export default function ScanStep5Screen({navigation}: Props) {
   const [errorText, setErrorText] = useState('');
   const isSubmittingRef = useRef(false);
   const hasScannedRef = useRef(false);
+  const isFocused = useIsFocused();
+  const [isForeground, setIsForeground] = useState(
+    AppState.currentState === 'active',
+  );
+
+  React.useEffect(() => {
+    const sub = AppState.addEventListener('change', (status: AppStateStatus) => {
+      setIsForeground(status === 'active');
+    });
+    return () => sub.remove();
+  }, []);
+
+  const isCameraActive = isFocused && isForeground && phase === 'scanning';
+  const handleCameraError = useCallback((_error: CameraRuntimeError) => {}, []);
 
   React.useEffect(() => {
     if (!hasPermission) {
@@ -192,16 +210,22 @@ export default function ScanStep5Screen({navigation}: Props) {
       <ScanStepIndicator currentStep={5} totalSteps={5} />
 
       <View style={styles.cameraArea}>
-        {phase === 'scanning' && hasPermission && device != null && (
-          <>
+        {hasPermission && device != null && (
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              phase !== 'scanning' && styles.hiddenCamera,
+            ]}>
             <Camera
               style={StyleSheet.absoluteFill}
               device={device}
-              isActive={phase === 'scanning'}
+              isActive={isCameraActive}
               codeScanner={codeScanner}
+              androidPreviewViewType="texture-view"
+              onError={handleCameraError}
             />
             <DocumentOverlay variant="barcode" />
-          </>
+          </View>
         )}
         {phase === 'confirm' && (
           <View style={styles.doneCard}>
@@ -424,5 +448,9 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 6,
     textAlign: 'left',
+  },
+  hiddenCamera: {
+    opacity: 0,
+    zIndex: -1,
   },
 });
