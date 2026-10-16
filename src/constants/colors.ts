@@ -4,27 +4,27 @@ export const Colors = {
   black: '#000000',
   transparent: 'transparent',
 
-  // Surfaces & Backgrounds
-  background: '#F8FAFC',
+  // Surfaces & Backgrounds (Diselaraskan dengan Cloud White ACIAX)
+  background: '#F6F7FA',
   surface: '#FFFFFF',
-  surfaceAlt: '#FCFAF7',
+  surfaceAlt: '#F0F2F6',
   cardBg: '#FFFFFF',
   darkCardBg: '#1E1E1E',
 
-  // Primary & Neutrals
-  primary: '#111827',
+  // Primary & Neutrals (Menggunakan Graphite & Violet khas ACIAX)
+  primary: '#8052F5',
   onPrimary: '#FFFFFF',
-  neutral: '#111827',
-  secondary: '#F1F5F9',
+  neutral: '#20232D',
+  secondary: '#F3E8FF',
 
-  // Emerald / Brand Accents (Raman Designs UI)
-  emerald: '#00BA68',
-  emeraldDark: '#009E57',
-  emeraldLight: '#E6FBF2',
-  emeraldMint: '#A7F3D0',
-  emeraldGlow: 'rgba(0, 186, 104, 0.45)',
-  accent: '#00BA68',
-  accentLight: '#E6FBF2',
+  // Emerald / Brand Accents (Diharmoniskan dengan ACIAX Violet & Mint)
+  emerald: '#8052F5',
+  emeraldDark: '#6D28D9',
+  emeraldLight: '#F3E8FF',
+  emeraldMint: '#43D6AD',
+  emeraldGlow: 'rgba(128, 82, 245, 0.35)',
+  accent: '#8052F5',
+  accentLight: '#F3E8FF',
 
   // Official ACIAX Brand System (ChatGPT Design Guideline)
   aciaxViolet: '#8052F5',
@@ -48,18 +48,18 @@ export const Colors = {
   destructive: '#EF4444',
   notificationBadge: '#EF4444',
 
-  // Typography Colors
-  textPrimary: '#111827',
+  // Typography Colors (Menggunakan tone Graphite & Slate gelap)
+  textPrimary: '#20232D',
   textSecondary: '#64748B',
   textTertiary: '#94A3B8',
-  textHeadline: '#0F172A',
+  textHeadline: '#20232D',
   textSlateDark: '#1E293B',
   textSlateMedium: '#334155',
   textOnAccent: '#FFFFFF',
   textOnPrimary: '#FFFFFF',
   textWhite: '#FFFFFF',
   textMuted: '#78716C',
-  textCharcoal: '#1A1A1A',
+  textCharcoal: '#20232D',
 
   // Borders & Dividers
   border: '#E2E8F0',
@@ -68,9 +68,9 @@ export const Colors = {
   gaugeTrack: '#E2E8F0',
 
   // Shadows & Overlays
-  shadow: 'rgba(0, 0, 0, 0.08)',
+  shadow: 'rgba(32, 35, 45, 0.08)',
   shadowDark: '#000000',
-  ambientShadow: 'rgba(0, 0, 0, 0.06)',
+  ambientShadow: 'rgba(32, 35, 45, 0.06)',
   dim: 'rgba(0, 0, 0, 0.4)',
   dimDark: 'rgba(0, 0, 0, 0.75)',
   whiteTranslucent20: 'rgba(255, 255, 255, 0.2)',
@@ -81,10 +81,10 @@ export const Colors = {
   // Satellite & Achievement Badges
   badgeStar: '#F59E0B',
   badgeStarBg: '#FEF3C7',
-  badgeShield: '#2563EB',
-  badgeShieldBg: '#EFF6FF',
-  badgeLeaf: '#10B981',
-  badgeLeafBg: '#ECFDF5',
+  badgeShield: '#8052F5',
+  badgeShieldBg: '#F3E8FF',
+  badgeLeaf: '#43D6AD',
+  badgeLeafBg: '#E6FAF4',
   badgeChart: '#7C3AED',
   badgeChartBg: '#F5F3FF',
   badgePink: '#EC4899',
