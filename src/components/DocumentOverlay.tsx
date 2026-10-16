@@ -8,7 +8,14 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import {Fonts} from '../constants';
+import {
+  Colors,
+  Typography,
+  DOCUMENT_ASPECT_RATIO,
+  DOCUMENT_VIEWPORT_WIDTH_PERCENT,
+  BARCODE_ASPECT_RATIO,
+  BARCODE_VIEWPORT_WIDTH_PERCENT,
+} from '../constants';
 
 type OverlayVariant = 'document' | 'barcode';
 
@@ -17,17 +24,10 @@ interface DocumentOverlayProps {
   label?: string;
 }
 
-const CORNER_LENGTH = 28;
+const CORNER_LENGTH = 32;
 const CORNER_THICKNESS = 3;
-const CORNER_COLOR = '#FFFFFF';
+const CORNER_COLOR = Colors.accent;
 const CORNER_RADIUS = 4;
-const DIM_COLOR = 'rgba(0,0,0,0.50)';
-
-const DOCUMENT_RATIO = 1.414;
-const DOCUMENT_WIDTH_PERCENT = 0.82;
-
-const BARCODE_RATIO = 0.35;
-const BARCODE_WIDTH_PERCENT = 0.75;
 
 function CornerMarkers() {
   return (
@@ -59,7 +59,7 @@ export default function DocumentOverlay({variant = 'document', label}: DocumentO
   React.useEffect(() => {
     pulseOpacity.value = withRepeat(
       withSequence(
-        withTiming(0.5, {duration: 1200, easing: Easing.inOut(Easing.ease)}),
+        withTiming(0.6, {duration: 1200, easing: Easing.inOut(Easing.ease)}),
         withTiming(1, {duration: 1200, easing: Easing.inOut(Easing.ease)}),
       ),
       -1,
@@ -72,8 +72,10 @@ export default function DocumentOverlay({variant = 'document', label}: DocumentO
   }));
 
   const isBarcode = variant === 'barcode';
-  const widthPercent = isBarcode ? BARCODE_WIDTH_PERCENT : DOCUMENT_WIDTH_PERCENT;
-  const ratio = isBarcode ? BARCODE_RATIO : DOCUMENT_RATIO;
+  const widthPercent = isBarcode
+    ? BARCODE_VIEWPORT_WIDTH_PERCENT
+    : DOCUMENT_VIEWPORT_WIDTH_PERCENT;
+  const ratio = isBarcode ? BARCODE_ASPECT_RATIO : DOCUMENT_ASPECT_RATIO;
 
   const cutoutWidth = screenWidth * widthPercent;
   const cutoutHeight = cutoutWidth * ratio;
@@ -88,7 +90,7 @@ export default function DocumentOverlay({variant = 'document', label}: DocumentO
       <View style={styles.middleRow}>
         <View style={styles.dimSide} />
         <View style={[styles.cutout, {width: cutoutWidth, height: cutoutHeight}]}>
-          <Animated.View style={[styles.borderFrame, pulseStyle]}>
+          <Animated.View style={[styles.cornerFrame, pulseStyle]}>
             <CornerMarkers />
           </Animated.View>
         </View>
@@ -109,34 +111,31 @@ const styles = StyleSheet.create({
   },
   dimTop: {
     flex: 1,
-    backgroundColor: DIM_COLOR,
+    backgroundColor: Colors.dim,
   },
   middleRow: {
     flexDirection: 'row',
   },
   dimSide: {
     flex: 1,
-    backgroundColor: DIM_COLOR,
+    backgroundColor: Colors.dim,
   },
   cutout: {
     backgroundColor: 'transparent',
   },
-  borderFrame: {
+  cornerFrame: {
     ...(StyleSheet.absoluteFill as object),
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.35)',
-    borderRadius: 8,
   },
   dimBottom: {
     flex: 1,
-    backgroundColor: DIM_COLOR,
+    backgroundColor: Colors.dim,
     alignItems: 'center',
     paddingTop: 20,
   },
   label: {
-    fontFamily: Fonts.body.medium,
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
+    ...Typography.label,
+    fontSize: 14,
+    color: Colors.whiteTranslucent85,
     textAlign: 'center',
     paddingHorizontal: 24,
   },

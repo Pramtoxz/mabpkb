@@ -1,4 +1,11 @@
-import React, {createContext, useContext, useEffect, useRef} from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import {DeviceEventEmitter} from 'react-native';
 
 type PedalCallback = () => void;
@@ -28,18 +35,21 @@ export function PedalProvider({children}: {children: React.ReactNode}) {
     };
   }, []);
 
-  const register = (cb: PedalCallback) => {
+  const register = useCallback((cb: PedalCallback) => {
     callbackRef.current = cb;
-  };
+  }, []);
 
-  const unregister = () => {
+  const unregister = useCallback(() => {
     callbackRef.current = null;
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({register, unregister}),
+    [register, unregister],
+  );
 
   return (
-    <PedalContext.Provider value={{register, unregister}}>
-      {children}
-    </PedalContext.Provider>
+    <PedalContext.Provider value={value}>{children}</PedalContext.Provider>
   );
 }
 

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "1",
+    "name": "Fahrezi",
+    "role": "System Analyst & Project Lead",
+    "badgeRole": "System Architect",
+    "tagColor": "#8052F5",
+    "summary": "Arsitektur Alur Kerja & Standardisasi Verifikasi BPKB",
+    "points": [
+      "Merancang standardisasi alur verifikasi berkas BPKB terintegrasi dari physical scanning hingga arsip cloud.",
+      "Menyusun spesifikasi kebutuhan sistem (SRS), audit trail compliance, dan SOP workstation cabang.",
+      "Mengawal keselarasan implementasi fungsional aplikasi dengan target operasional PT Menara Agung."
+    ],
+    "instagram": "fahrezi"
+  },
+  {
+    "id": "2",
+    "name": "Surya",
+    "role": "Operational Specialist & QA",
+    "badgeRole": "Quality Assurance",
+    "tagColor": "#10B981",
+    "summary": "Quality Assurance & Validasi Akurasi Berkas Fisik",
+    "points": [
+      "Mengidentifikasi kendala ergonomi operasional meja pemindaian di lingkungan kerja Main Dealer.",
+      "Melakukan validasi akurasi ekstraksi dokumen, stress-testing scanner, dan pengujian keandalan perangkat.",
+      "Memastikan kelayakan seluruh arsip digital sebelum otorisasi proses serah terima berkas BPKB."
+    ],
+    "instagram": "surya"
+  },
+  {
+    "id": "3",
+    "name": "Dito",
+    "role": "UI/UX Designer & Mobile Engineer",
+    "badgeRole": "Mobile & UX",
+    "tagColor": "#F59E0B",
+    "summary": "Arsitektur Mobile Android & Integrasi Pedal Kaki",
+    "points": [
+      "Merancang arsitektur visual modern 100% hands-free yang berfokus pada kecepatan operator.",
+      "Mengembangkan aplikasi Android React Native dengan pipeline penangkapan citra berlatensi rendah.",
+      "Mengimplementasikan bridging sinyal Bluetooth untuk kontrol shutter scanner nirkabel secara instan."
+    ],
+    "instagram": "dito"
+  },
+  {
+    "id": "4",
+    "name": "Rafi",
+    "role": "Web Developer & Database Admin",
+    "badgeRole": "Backend & Cloud",
+    "tagColor": "#3B82F6",
+    "summary": "Arsitektur REST API & Manajemen Database BPKB",
+    "points": [
+      "Membangun arsitektur backend REST API berkecepatan tinggi untuk pertukaran data antar-layanan.",
+      "Merancang Website dan skema penyimpanan data terenkripsi, manajemen file PDF, dan integritas arsip dokumen.",
+      "Mengelola pipeline sinkronisasi cloud, pemantauan kestabilan server, dan kesiapan integrasi Samsat."
+    ],
+    "instagram": "rafi"
+  }
+]

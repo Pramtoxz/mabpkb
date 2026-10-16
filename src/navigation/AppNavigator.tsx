@@ -1,12 +1,14 @@
-import React, {useState} from 'react';
+import React, {useState, useRef, useEffect, useCallback} from 'react';
 import {View, StyleSheet} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
-import LiquidGlassTabBar from '../components/LiquidGlassTabBar';
-import {HomeIcon, CameraIcon, BatchIcon} from '../components/TabIcons';
-import {TabNavProvider} from '../contexts/TabNavContext';
+import {TabNavProvider, useTabNav} from '../contexts/TabNavContext';
 import HomeStack from './HomeStack';
 import ScanStack from './ScanStack';
 import BatchStack from './BatchStack';
+import WelcomeScreen from '../screens/welcome/WelcomeScreen';
+import BluetoothPedalModal from '../components/BluetoothPedalModal';
+import {usePedalStatus} from '../hooks/usePedalStatus';
+import {useHardwareKey} from '../hooks/useHardwareKey';
 import {Colors} from '../constants';
 
 const screens = [
@@ -15,43 +17,61 @@ const screens = [
   {key: 'batch', component: BatchStack},
 ] as const;
 
-export default function AppNavigator() {
-  const [activeTab, setActiveTab] = useState(0);
+function NavigatorContent() {
+  const {
+    activeTab,
+    setActiveTab,
+    showWelcome,
+    isPedalIntercepted,
+  } = useTabNav();
 
-  const tabs: [
-    {key: string; icon: React.ReactNode; iconActive: React.ReactNode; onPress: () => void},
-    {key: string; icon: React.ReactNode; iconActive: React.ReactNode; onPress: () => void},
-    {key: string; icon: React.ReactNode; iconActive: React.ReactNode; onPress: () => void},
-  ] = [
-    {
-      key: 'home',
-      icon: <HomeIcon color={Colors.neutral} />,
-      iconActive: <HomeIcon color={Colors.onPrimary} />,
-      onPress: () => setActiveTab(0),
-    },
-    {
-      key: 'scan',
-      icon: <CameraIcon />,
-      iconActive: <CameraIcon />,
-      onPress: () => setActiveTab(1),
-    },
-    {
-      key: 'batch',
-      icon: <BatchIcon color={Colors.neutral} />,
-      iconActive: <BatchIcon color={Colors.onPrimary} />,
-      onPress: () => setActiveTab(2),
-    },
-  ];
+  const {isConnected} = usePedalStatus();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalType, setModalType] = useState<'connected' | 'pedal_pressed'>('connected');
+  const prevConnectedRef = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    if (prevConnectedRef.current === null) {
+      prevConnectedRef.current = isConnected;
+      return;
+    }
+    if (prevConnectedRef.current === false && isConnected === true) {
+      setModalType('connected');
+      setModalVisible(true);
+    }
+    prevConnectedRef.current = isConnected;
+  }, [isConnected]);
+
+  const handlePedalOutside = useCallback(() => {
+    setModalType('pedal_pressed');
+    setModalVisible(true);
+  }, []);
+
+  useHardwareKey(
+    handlePedalOutside,
+    activeTab !== 1 && !isPedalIntercepted,
+    'volumeDown',
+  );
 
   const ActiveScreen = screens[activeTab].component;
 
   return (
+    <View style={styles.screenContainer}>
+      {showWelcome ? <WelcomeScreen /> : <ActiveScreen />}
+      <BluetoothPedalModal
+        visible={modalVisible}
+        type={modalType}
+        onClose={() => setModalVisible(false)}
+      />
+    </View>
+  );
+}
+
+export default function AppNavigator() {
+  return (
     <NavigationContainer>
-      <TabNavProvider value={{activeTab, setActiveTab}}>
-        <View style={styles.screenContainer}>
-          <ActiveScreen />
-        </View>
-        <LiquidGlassTabBar tabs={tabs} activeIndex={activeTab} hidden={activeTab === 1} />
+      <TabNavProvider>
+        <NavigatorContent />
       </TabNavProvider>
     </NavigationContainer>
   );

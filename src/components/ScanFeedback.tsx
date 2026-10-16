@@ -8,7 +8,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import {CheckIcon, XIcon} from './TabIcons';
-import {Colors, Fonts} from '../constants';
+import {Colors, Typography} from '../constants';
 
 type FeedbackType = 'success' | 'error' | 'result';
 
@@ -42,14 +42,18 @@ export default function ScanFeedback({type, message, visible}: ScanFeedbackProps
 
   if (!visible) {return null;}
 
-  const bgColor = type === 'success' ? '#dcfce7' : type === 'error' ? '#fef2f2' : '#eff6ff';
-  const borderColor = type === 'success' ? '#16a34a' : type === 'error' ? Colors.destructive : Colors.primary;
-  const textColor = type === 'success' ? '#16a34a' : type === 'error' ? Colors.destructive : Colors.primary;
+  const isSuccess = type === 'success';
+  const isError = type === 'error';
+
+  const bgColor = isSuccess ? Colors.successLight : isError ? Colors.errorLight : Colors.accentLight;
+  const borderColor = isSuccess ? Colors.success : isError ? Colors.error : Colors.accent;
+  const textColor = isSuccess ? Colors.success : isError ? Colors.error : Colors.accent;
+  const iconColor = isSuccess ? Colors.success : isError ? Colors.error : Colors.accent;
 
   return (
     <Animated.View style={[styles.container, {backgroundColor: bgColor, borderColor}, animStyle]}>
-      {type === 'success' && <CheckIcon size={48} color="#16a34a" />}
-      {type === 'error' && <XIcon size={48} color={Colors.destructive} />}
+      {isSuccess && <CheckIcon size={48} color={iconColor} />}
+      {isError && <XIcon size={48} color={iconColor} />}
       <Text style={[styles.message, {color: textColor}]} numberOfLines={3}>
         {message}
       </Text>
@@ -70,7 +74,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 200,
-    shadowColor: '#000',
+    shadowColor: Colors.shadowDark,
     shadowOffset: {width: 0, height: 8},
     shadowOpacity: 0.15,
     shadowRadius: 24,
@@ -78,8 +82,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   message: {
-    fontFamily: Fonts.heading.bold,
-    fontSize: 22,
+    ...Typography.h2,
     textAlign: 'center',
   },
 });

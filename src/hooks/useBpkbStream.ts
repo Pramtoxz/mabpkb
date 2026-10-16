@@ -1,6 +1,5 @@
 import {useEffect, useRef, useState, useCallback} from 'react';
-import {EventSource} from 'react-native-event-source';
-import {Config} from 'react-native-config';
+import {trackBpkb} from '../api/endpoints';
 
 export interface StreamData {
   stage: string;
@@ -9,46 +8,61 @@ export interface StreamData {
   error_message: string | null;
 }
 
+const POLL_INTERVAL_MS = 3000;
+
 export function useBpkbStream(trackId: string | null) {
   const [data, setData] = useState<StreamData | null>(null);
   const [connected, setConnected] = useState(false);
-  const esRef = useRef<EventSource | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stoppedRef = useRef(false);
 
-  const disconnect = useCallback(() => {
-    if (esRef.current) {
-      esRef.current.close();
-      esRef.current = null;
+  const stop = useCallback(() => {
+    stoppedRef.current = true;
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    setConnected(false);
+  }, []);
+
+  const poll = useCallback(async (id: string) => {
+    try {
+      const detail = await trackBpkb(id);
+      const streamData: StreamData = {
+        stage: detail.stage,
+        status: detail.status,
+        pdf_url: detail.pdf_path,
+        error_message: detail.error_message,
+      };
+      setData(streamData);
+      setConnected(true);
+
+      if (detail.status === 'completed' || detail.status === 'failed') {
+        stop();
+      }
+    } catch {
       setConnected(false);
     }
-  }, []);
+  }, [stop]);
 
   useEffect(() => {
     if (!trackId) {
       return;
     }
 
-    const url = `${Config.API_BASE_URL}/api/bpkb/track/${trackId}/stream?secret_key=${Config.SECRET_KEY}`;
-    const es = new EventSource(url);
-    esRef.current = es;
+    stoppedRef.current = false;
+    setConnected(false);
 
-    es.addEventListener('open', () => setConnected(true));
+    poll(trackId);
 
-    es.addEventListener('message', (event: any) => {
-      const parsed: StreamData = JSON.parse(event.data);
-      setData(parsed);
-
-      if (parsed.status === 'completed' || parsed.status === 'failed') {
-        disconnect();
+    timerRef.current = setInterval(() => {
+      if (!stoppedRef.current) {
+        poll(trackId);
       }
-    });
+    }, POLL_INTERVAL_MS);
 
-    es.addEventListener('error', () => {
-      setConnected(false);
-      disconnect();
-    });
+    return () => stop();
+  }, [trackId, poll, stop]);
 
-    return () => disconnect();
-  }, [trackId, disconnect]);
-
-  return {data, connected, disconnect};
+  return {data, connected, disconnect: stop};
 }

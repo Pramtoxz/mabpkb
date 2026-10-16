@@ -1,13 +1,19 @@
-import React, {useRef, useState, useEffect} from 'react';
-import {View, StyleSheet, PermissionsAndroid, Platform} from 'react-native';
-import {Camera, CameraType} from 'react-native-camera-kit';
-import type {CameraApi} from 'react-native-camera-kit';
+import React, {useRef, useState, useEffect, useCallback} from 'react';
+import {View, StyleSheet, AppState, AppStateStatus} from 'react-native';
+import {
+  Camera,
+  CameraRuntimeError,
+  useCameraDevice,
+  useCameraPermission,
+} from 'react-native-vision-camera';
+import {useIsFocused} from '@react-navigation/native';
 import {usePedal} from '../contexts/PedalContext';
 import {useSound} from '../hooks/useSound';
 import type {ScanImage} from '../contexts/ScanContext';
 import ScanFeedback from './ScanFeedback';
 import DocumentOverlay from './DocumentOverlay';
 import {Colors} from '../constants';
+import {processScanImage} from '../utils/documentScanner';
 
 type OverlayVariant = 'document' | 'barcode' | 'none';
 
@@ -15,94 +21,114 @@ interface PedalCameraProps {
   filename: string;
   onCapture: (img: ScanImage) => void;
   overlayVariant?: OverlayVariant;
+  isActive?: boolean;
 }
 
-export default function PedalCamera({filename, onCapture, overlayVariant = 'document'}: PedalCameraProps) {
-  const cameraRef = useRef<CameraApi>(null);
+const FEEDBACK_DURATION_MS = 1200;
+
+export default function PedalCamera({
+  filename,
+  onCapture,
+  overlayVariant = 'document',
+  isActive: propIsActive = true,
+}: PedalCameraProps) {
+  const cameraRef = useRef<Camera>(null);
+  const device = useCameraDevice('back');
+  const {hasPermission, requestPermission} = useCameraPermission();
   const {play} = useSound();
-  const [feedback, setFeedback] = useState<{type: 'success' | 'error'; msg: string} | null>(null);
-  const [hasPermission, setHasPermission] = useState(false);
+  const {register, unregister} = usePedal();
+  const isFocused = useIsFocused();
+  const [isForeground, setIsForeground] = useState(
+    AppState.currentState === 'active',
+  );
+  const [feedback, setFeedback] = useState<{
+    type: 'success' | 'error';
+    msg: string;
+  } | null>(null);
   const isCapturingRef = useRef(false);
 
   useEffect(() => {
-    console.log('[PedalCamera] mounted — requesting permission');
-    if (Platform.OS !== 'android') {
-      setHasPermission(true);
-      return;
-    }
-    PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA).then(result => {
-      console.log('[PedalCamera] permission result:', result);
-      setHasPermission(result === PermissionsAndroid.RESULTS.GRANTED);
+    const sub = AppState.addEventListener('change', (status: AppStateStatus) => {
+      setIsForeground(status === 'active');
     });
+    return () => sub.remove();
   }, []);
 
-  useEffect(() => {
-    console.log('[PedalCamera] hasPermission:', hasPermission);
-  }, [hasPermission]);
+  const isActive = propIsActive && isFocused && isForeground;
 
-  const handleCapture = async () => {
-    console.log('[PedalCamera] handleCapture called — isCapturing:', isCapturingRef.current, 'hasPermission:', hasPermission, 'cameraRef:', !!cameraRef.current);
-    if (isCapturingRef.current || !cameraRef.current || !hasPermission) {
-      console.log('[PedalCamera] capture skipped');
+  useEffect(() => {
+    if (!hasPermission) {
+      requestPermission();
+    }
+  }, [hasPermission, requestPermission]);
+
+  const handleCapture = useCallback(async () => {
+    if (isCapturingRef.current || !cameraRef.current || !isActive) {
       return;
     }
     isCapturingRef.current = true;
 
     try {
-      console.log('[PedalCamera] calling camera.capture()');
-      const image = await cameraRef.current.capture();
-      console.log('[PedalCamera] capture success:', image.uri);
+      const photo = await cameraRef.current.takePhoto({
+        flash: 'off',
+        enableShutterSound: false,
+      });
 
-      const img: ScanImage = {
-        uri: image.uri,
-        type: 'image/jpeg',
-        name: filename,
-      };
+      const scanResult = await processScanImage(`file://${photo.path}`);
 
       play('success');
-      setFeedback({type: 'success', msg: 'Foto tersimpan'});
-      onCapture(img);
+      setFeedback({
+        type: 'success',
+        msg: scanResult.borderDetected
+          ? 'Foto tersimpan'
+          : 'Foto tersimpan (border tidak terdeteksi)',
+      });
+      onCapture({
+        uri: scanResult.uri,
+        type: 'image/jpeg',
+        name: filename,
+      });
 
       setTimeout(() => {
         setFeedback(null);
         isCapturingRef.current = false;
-      }, 1200);
-    } catch (e) {
-      console.log('[PedalCamera] capture error:', e);
+      }, FEEDBACK_DURATION_MS);
+    } catch {
       play('error');
       setFeedback({type: 'error', msg: 'Gagal mengambil foto'});
       isCapturingRef.current = false;
     }
-  };
+  }, [filename, onCapture, play, isActive]);
 
-  const {register, unregister} = usePedal();
+  const captureRef = useRef(handleCapture);
+  captureRef.current = handleCapture;
 
   useEffect(() => {
-    if (hasPermission) {
-      register(handleCapture);
+    if (!hasPermission || device == null || !isActive) {
+      return;
     }
+    register(() => captureRef.current());
     return () => unregister();
-  }, [hasPermission]);
+  }, [hasPermission, device, register, unregister, isActive]);
 
-  if (!hasPermission) {
-    console.log('[PedalCamera] rendering empty — no permission');
+  const handleCameraError = useCallback((_error: CameraRuntimeError) => {}, []);
+
+  if (!hasPermission || device == null) {
     return <View style={styles.container} />;
   }
 
-  console.log('[PedalCamera] rendering camera');
   return (
     <View style={styles.container}>
       <Camera
         ref={cameraRef}
         style={StyleSheet.absoluteFill}
-        cameraType={CameraType.Back}
-        flashMode="off"
-        focusMode="on"
-        shutterPhotoSound={false}
+        device={device}
+        isActive={isActive}
+        photo={true}
+        androidPreviewViewType="texture-view"
+        onError={handleCameraError}
       />
-      {overlayVariant !== 'none' && (
-        <DocumentOverlay variant={overlayVariant} />
-      )}
+      {overlayVariant !== 'none' && <DocumentOverlay variant={overlayVariant} />}
       <ScanFeedback
         type={feedback?.type ?? 'success'}
         message={feedback?.msg ?? ''}

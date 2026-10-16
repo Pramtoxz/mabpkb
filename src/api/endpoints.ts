@@ -1,4 +1,5 @@
-import {apiRequest} from './client';
+import { apiRequest } from './client';
+import { compressImage } from '../utils/imageCompressor';
 
 export interface DealerData {
   fk_dealer: string;
@@ -38,11 +39,19 @@ export interface BpkbImage {
   name: string;
 }
 
-export function processBpkb(nomesin: string, nobpkb: string, images: BpkbImage[]) {
+export async function processBpkb(
+  nomesin: string,
+  nobpkb: string,
+  images: BpkbImage[],
+) {
+  const compressed = await Promise.all(
+    images.map(img => compressImage(img.uri, img.name, 1)),
+  );
+
   const formData = new FormData();
   formData.append('nomesin', nomesin);
   formData.append('nobpkb', nobpkb);
-  images.forEach((img, index) => {
+  compressed.forEach((img, index) => {
     formData.append(`images[${index + 1}]`, {
       uri: img.uri,
       type: img.type,
@@ -69,4 +78,40 @@ export interface ActivityResponse {
 
 export function getActivity() {
   return apiRequest<ActivityResponse>('/api/activity');
+}
+
+export interface BpkbHistoryItem {
+  id: string;
+  no_mesin: string;
+  no_bpkb: string;
+  nama_konsumen: string | null;
+  dealer_code: string;
+  dealer_name: string;
+  status: string;
+  stage: string;
+  created_at: string;
+  pdf_url: string | null;
+}
+
+export function getBpkbHistory(params?: {
+  startDate?: string;
+  endDate?: string;
+  dealerCode?: string;
+  search?: string;
+}) {
+  const queryParts: string[] = [];
+  if (params?.startDate) {
+    queryParts.push(`startDate=${encodeURIComponent(params.startDate)}`);
+  }
+  if (params?.endDate) {
+    queryParts.push(`endDate=${encodeURIComponent(params.endDate)}`);
+  }
+  if (params?.dealerCode) {
+    queryParts.push(`dealerCode=${encodeURIComponent(params.dealerCode)}`);
+  }
+  if (params?.search) {
+    queryParts.push(`search=${encodeURIComponent(params.search)}`);
+  }
+  const qs = queryParts.join('&');
+  return apiRequest<BpkbHistoryItem[]>(`/api/bpkb/history${qs ? `?${qs}` : ''}`);
 }

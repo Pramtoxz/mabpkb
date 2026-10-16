@@ -3,7 +3,7 @@ import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import Modal from 'react-native-modal';
 import LinearGradient from 'react-native-linear-gradient';
 import {Path, Svg} from 'react-native-svg';
-import {Colors, Fonts} from '../constants';
+import {Colors, Typography} from '../constants';
 
 export type AlertType = 'alert' | 'confirm' | 'success' | 'error';
 
@@ -23,7 +23,7 @@ function AlertIcon({type}: {type: AlertType}) {
     return (
       <View style={[styles.iconWrap, styles.iconWrapSuccess]}>
         <Svg width={36} height={36} viewBox="0 0 24 24" fill="none">
-          <Path d="M20 6L9 17l-5-5" stroke="#16a34a" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+          <Path d="M20 6L9 17l-5-5" stroke={Colors.success} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
         </Svg>
       </View>
     );
@@ -33,7 +33,7 @@ function AlertIcon({type}: {type: AlertType}) {
     return (
       <View style={[styles.iconWrap, styles.iconWrapError]}>
         <Svg width={36} height={36} viewBox="0 0 24 24" fill="none">
-          <Path d="M18 6L6 18M6 6l12 12" stroke={Colors.destructive} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+          <Path d="M18 6L6 18M6 6l12 12" stroke={Colors.error} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
         </Svg>
       </View>
     );
@@ -64,10 +64,10 @@ export default function CustomAlert({
   const isConfirm = type === 'confirm';
 
   const gradientColors: [string, string] = isSuccess
-    ? ['#16a34a', '#15803d']
+    ? [Colors.success, Colors.successDark]
     : isError
-      ? [Colors.destructive, '#b91c1c']
-      : [Colors.primary, '#001a4d'];
+      ? [Colors.error, Colors.errorDark]
+      : [Colors.emerald, Colors.emeraldDark];
 
   return (
     <Modal
@@ -108,7 +108,7 @@ export default function CustomAlert({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
     borderRadius: 24,
     padding: 28,
     alignItems: 'center',
@@ -122,26 +122,23 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   iconWrapSuccess: {
-    backgroundColor: '#dcfce7',
+    backgroundColor: Colors.successLight,
   },
   iconWrapError: {
-    backgroundColor: '#fef2f2',
+    backgroundColor: Colors.errorLight,
   },
   iconWrapAlert: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: Colors.accentLight,
   },
   title: {
-    fontFamily: Fonts.heading.bold,
-    fontSize: 20,
-    color: Colors.neutral,
+    ...Typography.h2,
+    color: Colors.textPrimary,
     marginBottom: 8,
     textAlign: 'center',
   },
   message: {
-    fontFamily: Fonts.body.regular,
-    fontSize: 14,
-    color: Colors.neutral,
-    opacity: 0.7,
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 28,
@@ -159,12 +156,13 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.surface,
   },
   cancelText: {
-    fontFamily: Fonts.heading.semiBold,
+    ...Typography.label,
     fontSize: 15,
-    color: Colors.neutral,
+    color: Colors.textPrimary,
+    fontFamily: 'Inter-SemiBold',
   },
   confirmBtnWrap: {
     flex: 1,
@@ -181,8 +179,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   confirmText: {
-    fontFamily: Fonts.heading.semiBold,
+    ...Typography.label,
     fontSize: 15,
-    color: '#FFFFFF',
+    color: Colors.textOnAccent,
+    fontFamily: 'Inter-SemiBold',
   },
 });

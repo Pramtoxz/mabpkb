@@ -30,6 +30,7 @@ interface ScanContextType {
   setNomesin: (val: string) => void;
   setNobpkb: (val: string) => void;
   setDealer: (val: DealerData) => void;
+  retakeFromStep: (step: number) => void;
   resetScan: () => void;
 }
 
@@ -55,11 +56,38 @@ export function ScanProvider({children}: {children: React.ReactNode}) {
   const setNomesin = useCallback((val: string) => setState(s => ({...s, nomesin: val})), []);
   const setNobpkb = useCallback((val: string) => setState(s => ({...s, nobpkb: val})), []);
   const setDealer = useCallback((val: DealerData) => setState(s => ({...s, dealer: val})), []);
+  const retakeFromStep = useCallback((step: number) => {
+    setState(s => {
+      switch (step) {
+        case 1:
+          return {...s, photo1: null, photo2: null, photo3: null, photo4: null, nomesin: '', nobpkb: '', dealer: null};
+        case 2:
+          return {...s, photo2: null, photo3: null, photo4: null, nomesin: '', nobpkb: '', dealer: null};
+        case 3:
+          return {...s, photo3: null, photo4: null, nomesin: '', nobpkb: '', dealer: null};
+        case 4:
+          return {...s, photo4: null, nobpkb: ''};
+        default:
+          return s;
+      }
+    });
+  }, []);
   const resetScan = useCallback(() => setState(initialState), []);
 
   return (
     <ScanContext.Provider
-      value={{state, setPhoto1, setPhoto2, setPhoto3, setPhoto4, setNomesin, setNobpkb, setDealer, resetScan}}>
+      value={{
+        state,
+        setPhoto1,
+        setPhoto2,
+        setPhoto3,
+        setPhoto4,
+        setNomesin,
+        setNobpkb,
+        setDealer,
+        retakeFromStep,
+        resetScan,
+      }}>
       {children}
     </ScanContext.Provider>
   );
