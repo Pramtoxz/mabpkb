@@ -5,6 +5,8 @@ interface TabNavContextValue {
   activeTab: number;
   pendingTrackId: string | null;
   setPendingTrackId: (id: string | null) => void;
+  isTabBarHidden: boolean;
+  setIsTabBarHidden: (hidden: boolean) => void;
 }
 
 const TabNavContext = createContext<TabNavContextValue | null>(null);
@@ -12,6 +14,7 @@ const TabNavContext = createContext<TabNavContextValue | null>(null);
 export function TabNavProvider({children}: {children: React.ReactNode}) {
   const [activeTab, setActiveTabState] = useState(0);
   const [pendingTrackId, setPendingTrackId] = useState<string | null>(null);
+  const [isTabBarHidden, setIsTabBarHidden] = useState(true);
 
   const setActiveTab = useCallback((index: number) => {
     setActiveTabState(index);
@@ -19,7 +22,14 @@ export function TabNavProvider({children}: {children: React.ReactNode}) {
 
   return (
     <TabNavContext.Provider
-      value={{activeTab, setActiveTab, pendingTrackId, setPendingTrackId}}>
+      value={{
+        activeTab,
+        setActiveTab,
+        pendingTrackId,
+        setPendingTrackId,
+        isTabBarHidden,
+        setIsTabBarHidden,
+      }}>
       {children}
     </TabNavContext.Provider>
   );

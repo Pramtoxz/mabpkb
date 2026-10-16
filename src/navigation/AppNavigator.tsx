@@ -22,7 +22,7 @@ const tabsConfig = [
 ] as const;
 
 function NavigatorContent() {
-  const {activeTab, setActiveTab} = useTabNav();
+  const {activeTab, setActiveTab, isTabBarHidden} = useTabNav();
 
   const tabs = tabsConfig.map(t => ({
     key: t.key,
@@ -36,13 +36,14 @@ function NavigatorContent() {
   ];
 
   const ActiveScreen = screens[activeTab].component;
+  const isHidden = activeTab === 1 || isTabBarHidden;
 
   return (
     <>
       <View style={styles.screenContainer}>
         <ActiveScreen />
       </View>
-      <LiquidGlassTabBar tabs={tabs} activeIndex={activeTab} hidden={activeTab === 1} />
+      <LiquidGlassTabBar tabs={tabs} activeIndex={activeTab} hidden={isHidden} />
     </>
   );
 }

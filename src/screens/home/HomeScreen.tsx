@@ -30,7 +30,7 @@ const PROGRESS_BAR_HEIGHT = 8;
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const {scrollY, onScroll} = useCollapsibleHeader();
-  const {setActiveTab} = useTabNav();
+  const {setActiveTab, setIsTabBarHidden} = useTabNav();
 
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,9 +53,10 @@ export default function HomeScreen() {
   }, [progressFill]);
 
   useEffect(() => {
+    setIsTabBarHidden(false);
     contentOpacity.value = withTiming(1, {duration: 400, easing: Easing.out(Easing.cubic)});
     fetchActivity();
-  }, [fetchActivity, contentOpacity]);
+  }, [fetchActivity, contentOpacity, setIsTabBarHidden]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);

@@ -3,4 +3,5 @@ export const Images = {
   lgHonda: require('../assets/images/lg_honda.webp'),
   logoMD: require('../assets/images/logomd.png'),
   maLogo: require('../assets/images/malogo.png'),
+  scannerMascot: require('../assets/images/scanner_mascot.jpg'),
 } as const;
