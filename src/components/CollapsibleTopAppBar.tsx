@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   },
   surface: {
     flex: 1,
-    shadowColor: '#000',
+    shadowColor: Colors.shadowDark,
     shadowOffset: {width: 0, height: 2},
     shadowRadius: 8,
   },
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(212, 165, 74, 0.12)',
+    backgroundColor: Colors.goldTint,
   },
   actionButton: {
     width: TOOLBAR_ICON_SIZE,

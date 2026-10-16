@@ -1,4 +1,5 @@
 import {Platform, TextStyle} from 'react-native';
+import {Colors} from './colors';
 
 const font = (family: string, weight: Platform['OS'] extends 'ios' ? string : never) => {
   if (Platform.OS === 'ios') {
@@ -8,87 +9,131 @@ const font = (family: string, weight: Platform['OS'] extends 'ios' ? string : ne
 };
 
 export const Typography = {
+  displayBold: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 32,
+    lineHeight: 38,
+    color: Colors.textPrimary,
+  } as TextStyle,
+
+  displaySemiBold: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 22,
+    lineHeight: 30,
+    color: Colors.textPrimary,
+  } as TextStyle,
+
+  displayMedium: {
+    fontFamily: 'Poppins-Medium',
+    fontSize: 16,
+    lineHeight: 24,
+    color: Colors.textPrimary,
+  } as TextStyle,
+
+  displayRegular: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 14,
+    lineHeight: 20,
+    color: Colors.textSecondary,
+  } as TextStyle,
+
+  poppinsBold: {
+    fontFamily: 'Poppins-Bold',
+  } as TextStyle,
+
+  poppinsSemiBold: {
+    fontFamily: 'Poppins-SemiBold',
+  } as TextStyle,
+
+  poppinsMedium: {
+    fontFamily: 'Poppins-Medium',
+  } as TextStyle,
+
+  poppinsRegular: {
+    fontFamily: 'Poppins-Regular',
+  } as TextStyle,
+
   hero: {
     fontFamily: 'JetBrainsMono-Medium',
     fontSize: 64,
     lineHeight: 72,
-    color: '#1A1A1A',
+    color: Colors.textCharcoal,
   } as TextStyle,
 
   dataLarge: {
     fontFamily: 'JetBrainsMono-Medium',
     fontSize: 32,
     lineHeight: 40,
-    color: '#1A1A1A',
+    color: Colors.textCharcoal,
   } as TextStyle,
 
   dataMedium: {
     fontFamily: 'JetBrainsMono-Regular',
     fontSize: 18,
     lineHeight: 26,
-    color: '#1A1A1A',
+    color: Colors.textCharcoal,
   } as TextStyle,
 
   dataSmall: {
     fontFamily: 'JetBrainsMono-Regular',
     fontSize: 14,
     lineHeight: 20,
-    color: '#78716C',
+    color: Colors.textMuted,
   } as TextStyle,
 
   h1: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 28,
     lineHeight: 36,
-    color: '#1A1A1A',
+    color: Colors.textPrimary,
   } as TextStyle,
 
   h2: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 22,
     lineHeight: 30,
-    color: '#1A1A1A',
+    color: Colors.textPrimary,
   } as TextStyle,
 
   h3: {
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 18,
     lineHeight: 26,
-    color: '#1A1A1A',
+    color: Colors.textPrimary,
   } as TextStyle,
 
   body: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Poppins-Regular',
     fontSize: 16,
     lineHeight: 24,
-    color: '#1A1A1A',
+    color: Colors.textPrimary,
   } as TextStyle,
 
   bodySmall: {
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Poppins-Regular',
     fontSize: 14,
     lineHeight: 20,
-    color: '#78716C',
+    color: Colors.textSecondary,
   } as TextStyle,
 
   label: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 14,
     lineHeight: 20,
-    color: '#78716C',
+    color: Colors.textSecondary,
   } as TextStyle,
 
   labelSmall: {
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Poppins-Medium',
     fontSize: 12,
     lineHeight: 16,
-    color: '#78716C',
+    color: Colors.textSecondary,
   } as TextStyle,
 
   button: {
-    fontFamily: 'Inter-SemiBold',
-    fontSize: 18,
-    lineHeight: 24,
-    color: '#FFFFFF',
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 16,
+    lineHeight: 22,
+    color: Colors.white,
   } as TextStyle,
 } as const;

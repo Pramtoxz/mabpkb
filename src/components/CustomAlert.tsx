@@ -64,10 +64,10 @@ export default function CustomAlert({
   const isConfirm = type === 'confirm';
 
   const gradientColors: [string, string] = isSuccess
-    ? [Colors.success, '#2D6B52']
+    ? [Colors.success, Colors.successDark]
     : isError
-      ? [Colors.error, '#9E3A3A']
-      : [Colors.accent, '#B8903A'];
+      ? [Colors.error, Colors.errorDark]
+      : [Colors.emerald, Colors.emeraldDark];
 
   return (
     <Modal

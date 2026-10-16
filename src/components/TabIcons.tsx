@@ -28,7 +28,7 @@ export function HomeIcon({size = 24, color = Colors.neutral}: IconProps) {
   );
 }
 
-export function CameraIcon({size = 28, color = '#FFFFFF'}: IconProps) {
+export function CameraIcon({size = 28, color = Colors.white}: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
@@ -147,7 +147,7 @@ export function MoreIcon({size = 24, color = Colors.neutral}: IconProps) {
   );
 }
 
-export function CheckIcon({size = 24, color = '#16a34a'}: IconProps) {
+export function CheckIcon({size = 24, color = Colors.success}: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path

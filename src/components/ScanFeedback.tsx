@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 200,
-    shadowColor: '#000',
+    shadowColor: Colors.shadowDark,
     shadowOffset: {width: 0, height: 8},
     shadowOpacity: 0.15,
     shadowRadius: 24,

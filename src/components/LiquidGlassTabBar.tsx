@@ -12,9 +12,9 @@ import Animated, {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Colors} from '../constants';
 
-const TAB_BAR_HEIGHT = 72;
-const CENTER_BUTTON_SIZE = 68;
-const CENTER_BUTTON_LIFT = 28;
+const TAB_BAR_HEIGHT = 68;
+const CENTER_BUTTON_SIZE = 64;
+const CENTER_BUTTON_LIFT = 24;
 
 interface TabItem {
   key: string;
@@ -29,67 +29,68 @@ interface LiquidGlassTabBarProps {
   hidden?: boolean;
 }
 
-function CenterButton({icon, onPress, isActive, left}: {icon: React.ReactNode; onPress: () => void; isActive: boolean; left: number}) {
+function CenterButton({
+  icon,
+  onPress,
+  isActive,
+  left,
+}: {
+  icon: React.ReactNode;
+  onPress: () => void;
+  isActive: boolean;
+  left: number;
+}) {
   const pulse = useSharedValue(0);
-  const sway = useSharedValue(0);
 
   useEffect(() => {
     pulse.value = withRepeat(
       withSequence(
-        withTiming(1, {duration: 1500, easing: Easing.inOut(Easing.ease)}),
-        withTiming(0, {duration: 1500, easing: Easing.inOut(Easing.ease)}),
+        withTiming(1, {duration: 1600, easing: Easing.inOut(Easing.ease)}),
+        withTiming(0, {duration: 1600, easing: Easing.inOut(Easing.ease)}),
       ),
       -1,
       true,
     );
+  }, [pulse]);
 
-    sway.value = withRepeat(
-      withSequence(
-        withTiming(1, {duration: 2000, easing: Easing.inOut(Easing.ease)}),
-        withTiming(-1, {duration: 2000, easing: Easing.inOut(Easing.ease)}),
-        withTiming(0, {duration: 1000, easing: Easing.inOut(Easing.ease)}),
-      ),
-      -1,
-      true,
-    );
-  }, [pulse, sway]);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    const scale = interpolate(pulse.value, [0, 1], [1, 1.06]);
-    const translateX = interpolate(sway.value, [-1, 0, 1], [-2, 0, 2]);
+  const animatedGlow = useAnimatedStyle(() => {
+    const scale = interpolate(pulse.value, [0, 1], [1, 1.08]);
+    const opacity = interpolate(pulse.value, [0, 1], [0.6, 1]);
     return {
-      transform: [{scale}, {translateX}],
+      transform: [{scale}],
+      opacity,
     };
   });
 
   return (
-    <Animated.View
-      style={[
-        styles.centerButtonWrap,
-        {left},
-        animatedStyle,
-        isActive && styles.centerButtonActive,
-      ]}>
+    <View style={[styles.centerButtonWrap, {left}]}>
+      {/* Outer Emerald Glow Ring */}
+      <Animated.View style={[styles.glowRing, animatedGlow]} />
+
       <TouchableOpacity
-        style={styles.centerButton}
+        style={[styles.centerButton, isActive && styles.centerButtonActive]}
         onPress={onPress}
-        activeOpacity={0.85}>
+        activeOpacity={0.88}>
         <View style={styles.centerButtonInner}>
           {icon}
         </View>
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 }
 
-export default function LiquidGlassTabBar({tabs, activeIndex, hidden}: LiquidGlassTabBarProps) {
+export default function LiquidGlassTabBar({
+  tabs,
+  activeIndex,
+  hidden,
+}: LiquidGlassTabBarProps) {
   const insets = useSafeAreaInsets();
   const [containerWidth, setContainerWidth] = useState(0);
   const slideDown = useSharedValue(0);
 
   useEffect(() => {
     slideDown.value = withTiming(hidden ? 1 : 0, {
-      duration: 300,
+      duration: 250,
       easing: Easing.out(Easing.cubic),
     });
   }, [hidden, slideDown]);
@@ -109,11 +110,11 @@ export default function LiquidGlassTabBar({tabs, activeIndex, hidden}: LiquidGla
     <Animated.View
       style={[
         styles.container,
-        {paddingBottom: insets.bottom + 8},
+        {paddingBottom: Math.max(insets.bottom, 12)},
         animatedContainerStyle,
       ]}
       onLayout={onContainerLayout}>
-      <View style={styles.glass}>
+      <View style={styles.darkBar}>
         <View style={styles.tabRow}>
           <TabButton
             item={tabs[0]}
@@ -126,6 +127,7 @@ export default function LiquidGlassTabBar({tabs, activeIndex, hidden}: LiquidGla
           />
         </View>
       </View>
+
       {containerWidth > 0 && (
         <CenterButton
           icon={tabs[1].iconActive}
@@ -143,16 +145,11 @@ function TabButton({item, isActive}: {item: TabItem; isActive: boolean}) {
     <TouchableOpacity
       style={styles.tabButton}
       onPress={item.onPress}
-      activeOpacity={0.7}>
-      {isActive ? (
-        <View style={styles.activePill}>
-          {item.iconActive}
-        </View>
-      ) : (
-        <View style={styles.tabIconWrap}>
-          {item.icon}
-        </View>
-      )}
+      activeOpacity={0.75}>
+      <View style={styles.tabIconWrap}>
+        {isActive ? item.iconActive : item.icon}
+        {isActive && <View style={styles.activeDot} />}
+      </View>
     </TouchableOpacity>
   );
 }
@@ -165,87 +162,85 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 16,
     alignItems: 'center',
+    zIndex: 100,
   },
-  glass: {
+  darkBar: {
     width: '100%',
-    backgroundColor: Colors.background,
-    borderRadius: 28,
+    backgroundColor: Colors.darkNavBar,
+    borderRadius: 34,
     height: TAB_BAR_HEIGHT,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.7)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 8},
-    shadowOpacity: 0.1,
+    borderColor: Colors.darkNavBarBorder,
+    shadowColor: Colors.shadowDark,
+    shadowOffset: {width: 0, height: 10},
+    shadowOpacity: 0.35,
     shadowRadius: 24,
-    elevation: 16,
-    overflow: 'hidden',
+    elevation: 20,
+    overflow: 'visible',
   },
   tabRow: {
     flexDirection: 'row',
     alignItems: 'center',
     height: '100%',
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
   },
   tabButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    gap: 2,
   },
   tabIconWrap: {
     width: 44,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 22,
+    position: 'relative',
   },
-  activePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.accent,
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    gap: 6,
-    shadowColor: Colors.shadow,
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 1,
-    shadowRadius: 6,
-    elevation: 4,
+  activeDot: {
+    position: 'absolute',
+    bottom: 2,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.emerald,
   },
   centerButtonWrap: {
     position: 'absolute',
     top: -CENTER_BUTTON_LIFT,
     width: CENTER_BUTTON_SIZE,
     height: CENTER_BUTTON_SIZE,
-    zIndex: 10,
+    zIndex: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  centerButtonActive: {
-    shadowColor: Colors.shadow,
-    shadowOffset: {width: 0, height: 0},
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 20,
+  glowRing: {
+    position: 'absolute',
+    width: CENTER_BUTTON_SIZE + 16,
+    height: CENTER_BUTTON_SIZE + 16,
+    borderRadius: (CENTER_BUTTON_SIZE + 16) / 2,
+    backgroundColor: Colors.emeraldGlow,
   },
   centerButton: {
     width: CENTER_BUTTON_SIZE,
     height: CENTER_BUTTON_SIZE,
     borderRadius: CENTER_BUTTON_SIZE / 2,
-    backgroundColor: Colors.accent,
-    shadowColor: Colors.shadow,
-    shadowOffset: {width: 0, height: 6},
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 12,
-  },
-  centerButtonInner: {
-    flex: 1,
+    backgroundColor: Colors.emerald,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: CENTER_BUTTON_SIZE / 2,
+    shadowColor: Colors.emerald,
+    shadowOffset: {width: 0, height: 6},
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 14,
     borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: Colors.darkNavBar,
+  },
+  centerButtonActive: {
+    backgroundColor: Colors.emeraldDark,
+  },
+  centerButtonInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

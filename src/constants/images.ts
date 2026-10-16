@@ -4,4 +4,5 @@ export const Images = {
   logoMD: require('../assets/images/logomd.png'),
   maLogo: require('../assets/images/malogo.png'),
   scannerMascot: require('../assets/images/scanner_mascot.jpg'),
+  appLauncher: require('../assets/images/app_launcher.png'),
 } as const;

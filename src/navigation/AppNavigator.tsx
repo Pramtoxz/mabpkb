@@ -7,6 +7,7 @@ import {TabNavProvider, useTabNav} from '../contexts/TabNavContext';
 import HomeStack from './HomeStack';
 import ScanStack from './ScanStack';
 import BatchStack from './BatchStack';
+import WelcomeScreen from '../screens/welcome/WelcomeScreen';
 import {Colors} from '../constants';
 
 const screens = [
@@ -22,7 +23,11 @@ const tabsConfig = [
 ] as const;
 
 function NavigatorContent() {
-  const {activeTab, setActiveTab, isTabBarHidden} = useTabNav();
+  const {activeTab, setActiveTab, isTabBarHidden, showWelcome} = useTabNav();
+
+  if (showWelcome) {
+    return <WelcomeScreen />;
+  }
 
   const tabs = tabsConfig.map(t => ({
     key: t.key,

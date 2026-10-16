@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   label: {
     ...Typography.label,
     fontSize: 14,
-    color: 'rgba(255,255,255,0.85)',
+    color: Colors.whiteTranslucent85,
     textAlign: 'center',
     paddingHorizontal: 24,
   },

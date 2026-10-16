@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, {Path, Rect} from 'react-native-svg';
+import Svg, {Path, Rect, Circle} from 'react-native-svg';
 import {Colors} from '../constants';
 
 interface IconProps {
@@ -62,6 +62,68 @@ export function ChartBarIcon({size = 20, color = Colors.badgeChart}: IconProps) 
       <Rect x="3" y="14" width="4" height="7" rx="1.5" fill={color} />
       <Rect x="10" y="8" width="4" height="13" rx="1.5" fill={color} />
       <Rect x="17" y="3" width="4" height="18" rx="1.5" fill={color} />
+    </Svg>
+  );
+}
+
+export function HeartIcon({size = 20, color = Colors.badgePink}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+        fill={color}
+      />
+    </Svg>
+  );
+}
+
+export function ClockIcon({size = 20, color = Colors.badgeOrange}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth={2} />
+      <Path
+        d="M12 7v5l3 3"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function FlameIcon({size = 14, color = Colors.badgeOrange}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M12 2c-.5 2-2 4-4 6-2 2-3 4-3 6a7 7 0 0014 0c0-3-2-5-4-7-1-1-2-3-2-5 0 0-1 0-1 0z"
+        fill={color}
+      />
+    </Svg>
+  );
+}
+
+export function CrownIcon({size = 18, color = Colors.badgeChart}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M2 19h20v2H2v-2zM2 5l5 7 5-7 5 7 5-7v11H2V5z"
+        fill={color}
+      />
+    </Svg>
+  );
+}
+
+export function ChevronRightIcon({size = 18, color = Colors.textTertiary}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M9 18l6-6-6-6"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </Svg>
   );
 }

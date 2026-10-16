@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: Colors.dimDark,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: 20,
     padding: 18,
-    shadowColor: '#000',
+    shadowColor: Colors.shadowDark,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     height: 340,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#1E1E1E',
+    backgroundColor: Colors.darkCardBg,
     marginBottom: 16,
   },
   previewImage: {

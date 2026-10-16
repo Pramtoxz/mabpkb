@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect} from 'react';
+import React, {useCallback} from 'react';
 import {
   View,
   Text,
@@ -7,14 +7,14 @@ import {
   TouchableOpacity,
   Dimensions,
   ScrollView,
+  StatusBar,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import type {HomeStackParamList} from '../../navigation/types';
 import Svg, {Path} from 'react-native-svg';
-import {Colors, Images, Typography, Spacing, Radius} from '../../constants';
+import {Colors, Images, Spacing, Radius} from '../../constants';
 import {useSound} from '../../hooks/useSound';
 import {useHaptic} from '../../hooks/useHaptic';
+import {useHardwareKey} from '../../hooks/useHardwareKey';
 import {useTabNav} from '../../contexts/TabNavContext';
 import {
   StarIcon,
@@ -25,79 +25,106 @@ import {
   ArrowRightIcon,
 } from '../../components/WelcomeIcons';
 
-type Props = NativeStackScreenProps<HomeStackParamList, 'Welcome'>;
-
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
-export default function WelcomeScreen({navigation}: Props) {
+export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
   const {play: playSound} = useSound();
   const {trigger: haptic} = useHaptic();
-  const {setIsTabBarHidden} = useTabNav();
-
-  useEffect(() => {
-    setIsTabBarHidden(true);
-    return () => {
-      setIsTabBarHidden(false);
-    };
-  }, [setIsTabBarHidden]);
+  const {setShowWelcome, setActiveTab} = useTabNav();
 
   const handleStart = useCallback(() => {
     haptic('capture');
     playSound('tick');
-    setIsTabBarHidden(false);
-    navigation.navigate('HomeMain');
-  }, [navigation, haptic, playSound, setIsTabBarHidden]);
+    setShowWelcome(false);
+    setActiveTab(0);
+  }, [haptic, playSound, setShowWelcome, setActiveTab]);
+
+  useHardwareKey(handleStart, true, 'volumeDown');
 
   return (
     <View style={styles.container}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.emerald}
+        translucent
+      />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         bounces={false}
         showsVerticalScrollIndicator={false}>
-        <View style={[styles.headerContainer, {paddingTop: insets.top + Spacing.lg}]}>
-          <Text style={styles.headline}>
-            {'Scan Cepat.\nData Tepat.\nKerja Tuntas.'}
-          </Text>
+        <View style={[styles.headerContainer, {paddingTop: Math.max(insets.top, 16) + Spacing.sm}]}>
+          <View style={styles.topBarRow}>
+            <View style={styles.appBrandPill}>
+              <Image
+                source={Images.appLauncher}
+                style={styles.appBrandIcon}
+                resizeMode="contain"
+              />
+              <Text style={styles.appBrandText}>MABPKB</Text>
+            </View>
+
+            <View style={styles.partnerPill}>
+              <Image
+                source={Images.logoMD}
+                style={styles.partnerLogo}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
+
+          <View style={styles.headlineContainer}>
+            <View style={styles.sparkleRow}>
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M12 2L14.2 8.8L21 11L14.2 13.2L12 20L9.8 13.2L3 11L9.8 8.8L12 2Z"
+                  fill={Colors.emeraldMint}
+                />
+              </Svg>
+            </View>
+            <Text style={styles.headline}>
+              {'ACIAX\nSmart Scanning\nExperience'}
+            </Text>
+            <View style={styles.bylineBadge}>
+              <Text style={styles.bylineText}>By IT MA</Text>
+            </View>
+          </View>
+
           <Text style={styles.subHeadline}>
-            Posisikan dokumen pada tatakan scanner dan gunakan pedal untuk alur kerja otomatis.
+            Posisikan dokumen BPKB pada scanner dan biarkan ACIAX memproses secara otomatis!
           </Text>
 
           <View style={styles.waveWrapper}>
             <Svg
               width={SCREEN_WIDTH}
-              height={36}
-              viewBox="0 0 400 36"
+              height={50}
+              viewBox="0 0 400 50"
               preserveAspectRatio="none">
               <Path
-                d="M 0 36 L 0 20 Q 25 0, 50 20 Q 75 0, 100 20 Q 125 0, 150 20 Q 175 0, 200 20 Q 225 0, 250 20 Q 275 0, 300 20 Q 325 0, 350 20 Q 375 0, 400 20 L 400 36 Z"
-                fill={Colors.surface}
+                d="M 0 50 L 0 28 C 25 8, 75 8, 100 28 C 125 8, 175 8, 200 28 C 225 8, 275 8, 300 28 C 325 8, 375 8, 400 28 L 400 50 Z"
+                fill={Colors.dividerWave}
               />
             </Svg>
           </View>
         </View>
 
-        <View style={styles.bodyContainer}>
-          <View style={styles.heroWrapper}>
-            <View style={styles.orbitRow}>
-              <View style={[styles.satelliteCard, styles.cardLeft]}>
-                <View style={[styles.badgeIconBox, {backgroundColor: Colors.badgeStarBg}]}>
-                  <StarIcon size={18} color={Colors.badgeStar} />
-                </View>
-                <Text style={styles.cardTitle}>Pedal Cepat</Text>
-                <Text style={styles.cardDesc}>Hands-free</Text>
+        <View style={[styles.bodyContainer, {paddingBottom: Spacing.xxxl + Math.max(insets.bottom, 12)}]}>
+          <View style={styles.heroCluster}>
+            <View style={[styles.satelliteCard, styles.satTopLeft]}>
+              <View style={[styles.badgeIconCircle, {backgroundColor: Colors.badgeStarBg}]}>
+                <StarIcon size={16} color={Colors.badgeStar} />
               </View>
-
-              <View style={[styles.satelliteCard, styles.cardRight]}>
-                <View style={[styles.badgeIconBox, {backgroundColor: Colors.badgeShieldBg}]}>
-                  <ShieldCheckIcon size={18} color={Colors.badgeShield} />
-                </View>
-                <Text style={styles.cardTitle}>Validasi</Text>
-                <Text style={styles.cardDesc}>Stok unit</Text>
-              </View>
+              <Text style={styles.cardTitle}>Quick{'\n'}Scan</Text>
             </View>
 
-            <View style={styles.mascotContainer}>
+            <View style={[styles.satelliteCard, styles.satTopRight]}>
+              <View style={[styles.badgeIconCircle, {backgroundColor: Colors.badgeShieldBg}]}>
+                <ShieldCheckIcon size={16} color={Colors.badgeShield} />
+              </View>
+              <Text style={styles.cardTitle}>Smart{'\n'}Results</Text>
+            </View>
+
+            <View style={styles.mascotCard}>
               <Image
                 source={Images.scannerMascot}
                 style={styles.mascotImage}
@@ -105,29 +132,25 @@ export default function WelcomeScreen({navigation}: Props) {
               />
             </View>
 
-            <View style={styles.orbitRow}>
-              <View style={[styles.satelliteCard, styles.cardLeft]}>
-                <View style={[styles.badgeIconBox, {backgroundColor: Colors.badgeLeafBg}]}>
-                  <LeafIcon size={18} color={Colors.badgeLeaf} />
-                </View>
-                <Text style={styles.cardTitle}>Auto Crop</Text>
-                <Text style={styles.cardDesc}>Presisi BPKB</Text>
+            <View style={[styles.satelliteCard, styles.satBottomLeft]}>
+              <View style={[styles.badgeIconCircle, {backgroundColor: Colors.badgeLeafBg}]}>
+                <LeafIcon size={16} color={Colors.badgeLeaf} />
               </View>
+              <Text style={styles.cardTitle}>Better{'\n'}You</Text>
+            </View>
 
-              <View style={[styles.satelliteCard, styles.cardRight]}>
-                <View style={[styles.badgeIconBox, {backgroundColor: Colors.badgeChartBg}]}>
-                  <ChartBarIcon size={18} color={Colors.badgeChart} />
-                </View>
-                <Text style={styles.cardTitle}>Berkas PDF</Text>
-                <Text style={styles.cardDesc}>Otomatis</Text>
+            <View style={[styles.satelliteCard, styles.satBottomRight]}>
+              <View style={[styles.badgeIconCircle, {backgroundColor: Colors.badgeChartBg}]}>
+                <ChartBarIcon size={16} color={Colors.badgeChart} />
               </View>
+              <Text style={styles.cardTitle}>Smarter{'\n'}Choice</Text>
             </View>
           </View>
 
           <View style={styles.tipBox}>
             <Text style={styles.tipText}>
               <Text style={styles.tipBold}>Tip: </Text>
-              Pastikan sudut dokumen masuk ke dalam garis panduan scanner.
+              Injak pedal kaki untuk memindai otomatis{'\n'}tanpa perlu menyentuh layar smartphone.
             </Text>
           </View>
 
@@ -136,26 +159,11 @@ export default function WelcomeScreen({navigation}: Props) {
             onPress={handleStart}
             activeOpacity={0.88}>
             <View style={styles.ctaIconContainer}>
-              <ScannerButtonIcon size={20} color={Colors.emerald} />
+              <ScannerButtonIcon size={18} color={Colors.emerald} />
             </View>
-            <Text style={styles.ctaText}>Mulai Bekerja</Text>
-            <ArrowRightIcon size={20} color={Colors.surface} />
+            <Text style={styles.ctaText}>Let's Scan!</Text>
+            <ArrowRightIcon size={18} color={Colors.white} />
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={handleStart}
-            activeOpacity={0.7}>
-            <Text style={styles.secondaryText}>Langsung ke Dashboard {'>'}</Text>
-          </TouchableOpacity>
-
-          <View style={[styles.paginationRow, {paddingBottom: insets.bottom + Spacing.md}]}>
-            <View style={styles.dotActive} />
-            <View style={styles.dotInactive} />
-            <View style={styles.dotInactive} />
-            <View style={styles.dotInactive} />
-            <View style={styles.dotInactive} />
-          </View>
         </View>
       </ScrollView>
     </View>
@@ -173,132 +181,212 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     backgroundColor: Colors.emerald,
-    alignItems: 'center',
-    paddingHorizontal: Spacing.xl,
-    paddingBottom: 48,
+    paddingHorizontal: Spacing.xl + 4,
     position: 'relative',
+    paddingBottom: 48,
+  },
+  topBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.lg,
+  },
+  appBrandPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.whiteTranslucent20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Radius.full,
+    gap: 6,
+  },
+  appBrandIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+  },
+  appBrandText: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 12,
+    color: Colors.white,
+    letterSpacing: 0.5,
+  },
+  partnerPill: {
+    backgroundColor: Colors.white,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: Radius.full,
+    shadowColor: Colors.shadowDark,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  partnerLogo: {
+    width: 68,
+    height: 16,
+  },
+  headlineContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    marginVertical: Spacing.xs,
+  },
+  sparkleRow: {
+    position: 'absolute',
+    top: -6,
+    right: '22%',
   },
   headline: {
-    ...Typography.h1,
-    fontSize: 28,
-    lineHeight: 34,
-    color: Colors.neutral,
+    fontFamily: 'Poppins-Bold',
+    fontSize: 30,
+    lineHeight: 38,
+    color: Colors.textHeadline,
     textAlign: 'center',
-    fontFamily: 'Inter-Black',
     letterSpacing: -0.5,
   },
+  bylineBadge: {
+    backgroundColor: Colors.whiteTranslucent20,
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+    borderRadius: Radius.full,
+    marginTop: 6,
+    marginBottom: Spacing.xs,
+    alignSelf: 'center',
+  },
+  bylineText: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 11,
+    color: Colors.textHeadline,
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
   subHeadline: {
-    ...Typography.bodySmall,
+    fontFamily: 'Poppins-Regular',
     fontSize: 13,
     lineHeight: 18,
-    color: Colors.neutral,
-    opacity: 0.78,
+    color: Colors.textHeadline,
+    opacity: 0.88,
     textAlign: 'center',
-    marginTop: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+    alignSelf: 'center',
+    maxWidth: '92%',
   },
   waveWrapper: {
     position: 'absolute',
     bottom: -1,
     left: 0,
     right: 0,
-    width: '100%',
+    height: 50,
   },
   bodyContainer: {
-    flex: 1,
     backgroundColor: Colors.surface,
     paddingHorizontal: Spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingTop: Spacing.sm,
+    alignItems: 'center',
   },
-  heroWrapper: {
+  heroCluster: {
     width: '100%',
+    maxWidth: 340,
+    height: 230,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
     marginVertical: Spacing.md,
   },
-  orbitRow: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    zIndex: 2,
-  },
-  mascotContainer: {
-    width: 136,
-    height: 136,
-    borderRadius: 30,
-    borderWidth: 3,
-    borderColor: Colors.emeraldLight,
-    overflow: 'hidden',
+  mascotCard: {
+    width: 148,
+    height: 148,
+    borderRadius: 34,
     backgroundColor: Colors.surface,
-    elevation: 6,
-    shadowColor: Colors.neutral,
-    shadowOffset: {width: 0, height: 6},
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    marginVertical: -16,
-    zIndex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+    shadowColor: Colors.emerald,
+    shadowOffset: {width: 0, height: 10},
+    shadowOpacity: 0.22,
+    shadowRadius: 22,
+    elevation: 8,
+    overflow: 'hidden',
   },
   mascotImage: {
     width: '100%',
     height: '100%',
   },
   satelliteCard: {
+    position: 'absolute',
+    width: 82,
+    minHeight: 88,
     backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
+    borderRadius: 20,
     paddingVertical: 10,
-    paddingHorizontal: Spacing.md,
-    alignItems: 'center',
-    minWidth: 100,
-    elevation: 4,
-    shadowColor: Colors.neutral,
-    shadowOffset: {width: 0, height: 6},
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-  },
-  cardLeft: {
-    alignSelf: 'flex-start',
-  },
-  cardRight: {
-    alignSelf: 'flex-end',
-  },
-  badgeIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: Radius.md,
+    paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    shadowColor: Colors.shadowDark,
+    shadowOffset: {width: 0, height: 6},
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    zIndex: 5,
+  },
+  satTopLeft: {
+    top: 4,
+    left: 12,
+    transform: [{rotate: '-3deg'}],
+  },
+  satTopRight: {
+    top: 4,
+    right: 12,
+    transform: [{rotate: '3deg'}],
+  },
+  satBottomLeft: {
+    bottom: 4,
+    left: 12,
+    transform: [{rotate: '2deg'}],
+  },
+  satBottomRight: {
+    bottom: 4,
+    right: 12,
+    transform: [{rotate: '-2deg'}],
+  },
+  badgeIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
   },
   cardTitle: {
-    ...Typography.labelSmall,
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    fontFamily: 'Inter-Bold',
-  },
-  cardDesc: {
-    fontSize: 10,
-    color: Colors.textSecondary,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Poppins-Bold',
+    fontSize: 10.5,
+    lineHeight: 14,
+    color: Colors.textSlateDark,
+    textAlign: 'center',
   },
   tipBox: {
-    marginVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+    width: '100%',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.lg,
   },
   tipText: {
-    ...Typography.bodySmall,
+    fontFamily: 'Poppins-Regular',
     fontSize: 12,
+    lineHeight: 18,
     color: Colors.textSecondary,
     textAlign: 'center',
   },
   tipBold: {
-    color: Colors.emerald,
-    fontWeight: '700',
+    fontFamily: 'Poppins-Bold',
+    color: Colors.emeraldDark,
   },
   ctaButton: {
     width: '100%',
@@ -309,55 +397,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
-    elevation: 6,
     shadowColor: Colors.emerald,
     shadowOffset: {width: 0, height: 8},
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.38,
     shadowRadius: 16,
-    marginTop: Spacing.sm,
+    elevation: 6,
   },
   ctaIconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: Radius.md,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   ctaText: {
-    ...Typography.button,
+    fontFamily: 'Poppins-Bold',
     fontSize: 16,
-    fontWeight: '700',
-    color: Colors.onPrimary,
-    fontFamily: 'Inter-Bold',
-  },
-  secondaryButton: {
-    paddingVertical: Spacing.sm,
-    marginTop: Spacing.xs,
-  },
-  secondaryText: {
-    ...Typography.labelSmall,
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-  paginationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: Spacing.sm,
-  },
-  dotActive: {
-    width: 22,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.emerald,
-  },
-  dotInactive: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.paginationInactive,
+    color: Colors.white,
+    letterSpacing: 0.3,
   },
 });
