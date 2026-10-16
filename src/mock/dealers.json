@@ -1,62 +1,50 @@
 [
   {
     "code": "MA-01",
-    "name": "Menara Agung Veteran",
-    "region": "Kota Padang"
+    "name": "Menara Agung Veteran"
   },
   {
     "code": "MA-02",
-    "name": "Menara Agung Simpang Haru",
-    "region": "Kota Padang"
+    "name": "Menara Agung Simpang Haru"
   },
   {
     "code": "MA-03",
-    "name": "Menara Agung Ulak Karang",
-    "region": "Kota Padang"
+    "name": "Menara Agung Ulak Karang"
   },
   {
     "code": "MA-04",
-    "name": "Menara Agung Bukittinggi",
-    "region": "Kota Bukittinggi"
+    "name": "Menara Agung Bukittinggi"
   },
   {
     "code": "MA-05",
-    "name": "Menara Agung Payakumbuh",
-    "region": "Kota Payakumbuh"
+    "name": "Menara Agung Payakumbuh"
   },
   {
     "code": "MA-06",
-    "name": "Menara Agung Solok",
-    "region": "Kota Solok"
+    "name": "Menara Agung Solok"
   },
   {
     "code": "MA-07",
-    "name": "Menara Agung Pariaman",
-    "region": "Kota Pariaman"
+    "name": "Menara Agung Pariaman"
   },
   {
     "code": "MA-08",
-    "name": "Menara Agung Painan",
-    "region": "Kabupaten Pesisir Selatan"
+    "name": "Menara Agung Painan"
   },
   {
     "code": "MA-09",
-    "name": "Menara Agung Lubuk Basung",
-    "region": "Kabupaten Agam"
+    "name": "Menara Agung Lubuk Basung"
   },
   {
     "code": "MA-10",
-    "name": "Menara Agung Pasaman Barat",
-    "region": "Kabupaten Pasaman Barat"
+    "name": "Menara Agung Pasaman Barat"
   },
   {
     "code": "MA-11",
-    "name": "Menara Agung Sijunjung",
-    "region": "Kabupaten Sijunjung"
+    "name": "Menara Agung Sijunjung"
   },
   {
     "code": "MA-12",
-    "name": "Menara Agung Dharmasraya",
-    "region": "Kabupaten Dharmasraya"
+    "name": "Menara Agung Dharmasraya"
   }
 ]

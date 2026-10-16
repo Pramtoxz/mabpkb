@@ -1,0 +1,32 @@
+[
+  {
+    "id": "REV-01",
+    "bpkbNumber": "N-0834211",
+    "ownerName": "Ahmad Fauzi",
+    "vehiclePlate": "BA 3421 QA",
+    "dealerName": "Menara Agung Simpang Haru",
+    "issue": "Nomor rangka lembar 2 tidak terbaca jelas akibat tinta Samsat tipis.",
+    "status": "Perlu Foto Ulang",
+    "timestamp": "09:40 WIB"
+  },
+  {
+    "id": "REV-02",
+    "bpkbNumber": "N-0834289",
+    "ownerName": "Siti Rahma",
+    "vehiclePlate": "BA 5612 BT",
+    "dealerName": "Menara Agung Veteran",
+    "issue": "Pantulan silau lampu pada 4 digit terakhir nomor mesin.",
+    "status": "Perlu Foto Ulang",
+    "timestamp": "11:15 WIB"
+  },
+  {
+    "id": "REV-03",
+    "bpkbNumber": "N-0834310",
+    "ownerName": "PT Berkah Mandiri",
+    "vehiclePlate": "BA 8911 XY",
+    "dealerName": "Menara Agung Bukittinggi",
+    "issue": "Stempel pengesahan kepolisian pada lembar 4 terpotong sebagian.",
+    "status": "Periksa Fisik",
+    "timestamp": "13:20 WIB"
+  }
+]

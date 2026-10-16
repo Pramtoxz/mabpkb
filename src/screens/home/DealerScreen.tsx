@@ -18,7 +18,6 @@ import dealersData from '../../mock/dealers.json';
 interface DealerBranch {
   code: string;
   name: string;
-  region: string;
 }
 
 const DEALER_LIST: DealerBranch[] = dealersData as DealerBranch[];
@@ -46,8 +45,7 @@ export default function DealerScreen() {
     return DEALER_LIST.filter(
       d =>
         d.name.toLowerCase().includes(q) ||
-        d.code.toLowerCase().includes(q) ||
-        d.region.toLowerCase().includes(q),
+        d.code.toLowerCase().includes(q),
     );
   }, [search]);
 
@@ -93,7 +91,7 @@ export default function DealerScreen() {
           </Svg>
           <TextInput
             style={styles.searchInput}
-            placeholder="Cari kode atau nama cabang..."
+            placeholder="Cari kode atau nama dealer..."
             placeholderTextColor={Colors.textTertiary}
             value={search}
             onChangeText={setSearch}
@@ -115,7 +113,6 @@ export default function DealerScreen() {
             </View>
             <View style={styles.dealerMeta}>
               <Text style={styles.dealerName}>{dealer.name}</Text>
-              <Text style={styles.dealerRegion}>{dealer.region}</Text>
             </View>
           </View>
         ))}
@@ -236,11 +233,5 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Bold',
     fontSize: 14,
     color: Colors.textHeadline,
-    marginBottom: 2,
-  },
-  dealerRegion: {
-    fontFamily: 'Poppins-Regular',
-    fontSize: 11.5,
-    color: Colors.textSecondary,
   },
 });

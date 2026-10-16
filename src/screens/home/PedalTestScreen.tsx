@@ -21,7 +21,7 @@ export default function PedalTestScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
-  const {setIsTabBarHidden} = useTabNav();
+  const {setIsTabBarHidden, setIsPedalIntercepted} = useTabNav();
   const {isConnected} = usePedalStatus();
 
   const [pressCount, setPressCount] = useState(0);
@@ -33,10 +33,12 @@ export default function PedalTestScreen() {
   useFocusEffect(
     useCallback(() => {
       setIsTabBarHidden(true);
+      setIsPedalIntercepted(true);
       return () => {
         setIsTabBarHidden(false);
+        setIsPedalIntercepted(false);
       };
-    }, [setIsTabBarHidden]),
+    }, [setIsTabBarHidden, setIsPedalIntercepted]),
   );
 
   const handlePedalTrigger = useCallback(() => {

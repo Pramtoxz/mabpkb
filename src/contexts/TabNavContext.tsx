@@ -9,6 +9,8 @@ interface TabNavContextValue {
   setIsTabBarHidden: (hidden: boolean) => void;
   showWelcome: boolean;
   setShowWelcome: (show: boolean) => void;
+  isPedalIntercepted: boolean;
+  setIsPedalIntercepted: (intercepted: boolean) => void;
 }
 
 const TabNavContext = createContext<TabNavContextValue | null>(null);
@@ -18,6 +20,7 @@ export function TabNavProvider({children}: {children: React.ReactNode}) {
   const [pendingTrackId, setPendingTrackId] = useState<string | null>(null);
   const [isTabBarHidden, setIsTabBarHidden] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
+  const [isPedalIntercepted, setIsPedalIntercepted] = useState(false);
 
   const setActiveTab = useCallback((index: number) => {
     setActiveTabState(index);
@@ -34,6 +37,8 @@ export function TabNavProvider({children}: {children: React.ReactNode}) {
         setIsTabBarHidden,
         showWelcome,
         setShowWelcome,
+        isPedalIntercepted,
+        setIsPedalIntercepted,
       }}>
       {children}
     </TabNavContext.Provider>

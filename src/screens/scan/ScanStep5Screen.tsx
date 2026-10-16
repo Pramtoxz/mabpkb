@@ -119,7 +119,7 @@ export default function ScanStep5Screen({navigation}: Props) {
             setPendingTrackId(result.track_id);
             resetScan();
             setPhase('scanning');
-            setActiveTab(2);
+            setActiveTab(0);
           },
           onCancel: () => {
             resetScan();

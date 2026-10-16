@@ -1,0 +1,35 @@
+[
+  {
+    "id": "ST-2026-001",
+    "dealerCode": "MA-02",
+    "dealerName": "Menara Agung Simpang Haru",
+    "documentCount": 24,
+    "timestamp": "14:15 WIB",
+    "status": "Selesai",
+    "suratNumber": "SJ-MA/2026/042",
+    "hasSignedPhoto": true,
+    "notes": "Surat penyerahan 24 berkas BPKB telah ditandatangani dan difoto."
+  },
+  {
+    "id": "ST-2026-002",
+    "dealerCode": "MA-01",
+    "dealerName": "Menara Agung Veteran",
+    "documentCount": 18,
+    "timestamp": "11:30 WIB",
+    "status": "Selesai",
+    "suratNumber": "SJ-MA/2026/039",
+    "hasSignedPhoto": true,
+    "notes": "Surat tanda terima 18 berkas BPKB telah ditandatangani dan difoto."
+  },
+  {
+    "id": "ST-2026-003",
+    "dealerCode": "MA-04",
+    "dealerName": "Menara Agung Bukittinggi",
+    "documentCount": 15,
+    "timestamp": "Menunggu",
+    "status": "Menunggu Penjemputan",
+    "suratNumber": "SJ-MA/2026/045",
+    "hasSignedPhoto": false,
+    "notes": "15 berkas BPKB siap dijemput oleh perwakilan cabang Bukittinggi."
+  }
+]

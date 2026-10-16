@@ -1,0 +1,25 @@
+{
+  "summary": {
+    "totalThisMonth": 1840,
+    "targetThisMonth": 2200,
+    "achievementPercentage": 84,
+    "avgScanSeconds": 18,
+    "accuracyRate": 99.2
+  },
+  "weekly": [
+    {"day": "Sen", "completed": 92, "target": 100},
+    {"day": "Sel", "completed": 98, "target": 100},
+    {"day": "Rab", "completed": 85, "target": 100},
+    {"day": "Kam", "completed": 95, "target": 100},
+    {"day": "Jum", "completed": 78, "target": 100},
+    {"day": "Sab", "completed": 84, "target": 100}
+  ],
+  "monthly": [
+    {"month": "Mei", "total": 1950},
+    {"month": "Jun", "total": 2100},
+    {"month": "Jul", "total": 2050},
+    {"month": "Agu", "total": 2180},
+    {"month": "Sep", "total": 2240},
+    {"month": "Okt", "total": 1840}
+  ]
+}

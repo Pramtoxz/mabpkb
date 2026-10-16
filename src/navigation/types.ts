@@ -6,6 +6,10 @@ export type HomeStackParamList = {
   DealerList: undefined;
   SopGuide: undefined;
   PedalTest: undefined;
+  TrackStatus: {trackId?: string} | undefined;
+  Handover: undefined;
+  Revision: undefined;
+  Performance: undefined;
 };
 
 export type ScanStackParamList = {

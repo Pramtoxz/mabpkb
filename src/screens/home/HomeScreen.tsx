@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {Colors} from '../../constants';
+import {Colors, Spacing} from '../../constants';
 import {useTabNav} from '../../contexts/TabNavContext';
 import {getActivity, type ActivityResponse} from '../../api/endpoints';
 import HomeHeader from './components/HomeHeader';
@@ -20,7 +20,19 @@ import mockActivity from '../../mock/activity.json';
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
-  const {setActiveTab, setIsTabBarHidden} = useTabNav();
+  const {
+    setActiveTab,
+    setIsTabBarHidden,
+    pendingTrackId,
+    setPendingTrackId,
+  } = useTabNav();
+
+  useEffect(() => {
+    if (pendingTrackId) {
+      navigation.navigate('TrackStatus', {trackId: pendingTrackId});
+      setPendingTrackId(null);
+    }
+  }, [pendingTrackId, navigation, setPendingTrackId]);
 
   const [activity, setActivity] = useState<ActivityResponse | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -72,7 +84,7 @@ export default function HomeScreen() {
           styles.scrollContent,
           {
             paddingTop: Math.max(insets.top, 16),
-            paddingBottom: 96 + Math.max(insets.bottom, 12),
+            paddingBottom: Spacing.xl + Math.max(insets.bottom, 16),
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -88,10 +100,14 @@ export default function HomeScreen() {
         <ShiftProductivityCard completed={completed} target={target} />
 
         <QuickActionRibbon
-          onOpenTeam={() => navigation.navigate('TeamDetail')}
           onOpenDealer={() => navigation.navigate('DealerList')}
+          onOpenTrack={() => navigation.navigate('TrackStatus')}
+          onOpenHandover={() => navigation.navigate('Handover')}
+          onOpenRevision={() => navigation.navigate('Revision')}
+          onOpenPerformance={() => navigation.navigate('Performance')}
           onOpenSop={() => navigation.navigate('SopGuide')}
           onOpenPedalTest={() => navigation.navigate('PedalTest')}
+          onOpenTeam={() => navigation.navigate('TeamDetail')}
         />
 
         <HeroScannerCard onPressScan={handleStartScan} />

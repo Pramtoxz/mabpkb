@@ -10,8 +10,8 @@ interface HomeHeaderProps {
 
 export default function HomeHeader({
   appName = 'ACIAX MABPKB',
-  greeting = 'Halo,',
-  operatorName = 'Tim IT MA',
+  greeting = 'Hey,',
+  operatorName = 'MA People',
 }: HomeHeaderProps) {
   return (
     <View style={styles.container}>

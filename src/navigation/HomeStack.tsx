@@ -7,6 +7,11 @@ import DealerScreen from '../screens/home/DealerScreen';
 import SopScreen from '../screens/home/SopScreen';
 import PedalTestScreen from '../screens/home/PedalTestScreen';
 
+import TrackStatusScreen from '../screens/track/TrackStatusScreen';
+import HandoverScreen from '../screens/home/HandoverScreen';
+import RevisionScreen from '../screens/home/RevisionScreen';
+import PerformanceScreen from '../screens/home/PerformanceScreen';
+
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
 export default function HomeStack() {
@@ -26,6 +31,10 @@ export default function HomeStack() {
       <Stack.Screen name="DealerList" component={DealerScreen} />
       <Stack.Screen name="SopGuide" component={SopScreen} />
       <Stack.Screen name="PedalTest" component={PedalTestScreen} />
+      <Stack.Screen name="TrackStatus" component={TrackStatusScreen} />
+      <Stack.Screen name="Handover" component={HandoverScreen} />
+      <Stack.Screen name="Revision" component={RevisionScreen} />
+      <Stack.Screen name="Performance" component={PerformanceScreen} />
     </Stack.Navigator>
   );
 }

@@ -1,13 +1,14 @@
-import React from 'react';
+import React, {useState, useRef, useEffect, useCallback} from 'react';
 import {View, StyleSheet} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
-import LiquidGlassTabBar from '../components/LiquidGlassTabBar';
-import {HomeIcon, CameraIcon, BatchIcon} from '../components/TabIcons';
 import {TabNavProvider, useTabNav} from '../contexts/TabNavContext';
 import HomeStack from './HomeStack';
 import ScanStack from './ScanStack';
 import BatchStack from './BatchStack';
 import WelcomeScreen from '../screens/welcome/WelcomeScreen';
+import BluetoothPedalModal from '../components/BluetoothPedalModal';
+import {usePedalStatus} from '../hooks/usePedalStatus';
+import {useHardwareKey} from '../hooks/useHardwareKey';
 import {Colors} from '../constants';
 
 const screens = [
@@ -16,40 +17,53 @@ const screens = [
   {key: 'batch', component: BatchStack},
 ] as const;
 
-const tabsConfig = [
-  {key: 'home', Icon: HomeIcon, tab: 0},
-  {key: 'scan', Icon: CameraIcon, tab: 1},
-  {key: 'batch', Icon: BatchIcon, tab: 2},
-] as const;
-
 function NavigatorContent() {
-  const {activeTab, setActiveTab, isTabBarHidden, showWelcome} = useTabNav();
+  const {
+    activeTab,
+    setActiveTab,
+    showWelcome,
+    isPedalIntercepted,
+  } = useTabNav();
 
-  if (showWelcome) {
-    return <WelcomeScreen />;
-  }
+  const {isConnected} = usePedalStatus();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalType, setModalType] = useState<'connected' | 'pedal_pressed'>('connected');
+  const prevConnectedRef = useRef<boolean | null>(null);
 
-  const tabs = tabsConfig.map(t => ({
-    key: t.key,
-    icon: <t.Icon color={t.key === 'scan' ? undefined : Colors.textSecondary} />,
-    iconActive: <t.Icon color={t.key === 'scan' ? undefined : Colors.textOnAccent} />,
-    onPress: () => setActiveTab(t.tab),
-  })) as [
-    {key: string; icon: React.ReactNode; iconActive: React.ReactNode; onPress: () => void},
-    {key: string; icon: React.ReactNode; iconActive: React.ReactNode; onPress: () => void},
-    {key: string; icon: React.ReactNode; iconActive: React.ReactNode; onPress: () => void},
-  ];
+  useEffect(() => {
+    if (prevConnectedRef.current === null) {
+      prevConnectedRef.current = isConnected;
+      return;
+    }
+    if (prevConnectedRef.current === false && isConnected === true) {
+      setModalType('connected');
+      setModalVisible(true);
+    }
+    prevConnectedRef.current = isConnected;
+  }, [isConnected]);
+
+  const handlePedalOutside = useCallback(() => {
+    setModalType('pedal_pressed');
+    setModalVisible(true);
+  }, []);
+
+  useHardwareKey(
+    handlePedalOutside,
+    activeTab !== 1 && !isPedalIntercepted,
+    'volumeDown',
+  );
 
   const ActiveScreen = screens[activeTab].component;
-  const isHidden = activeTab === 1 || isTabBarHidden;
 
   return (
-    <>
-      <View style={styles.screenContainer}>
-        <ActiveScreen />
-      </View>
-      <LiquidGlassTabBar tabs={tabs} activeIndex={activeTab} hidden={isHidden} />
-    </>
+    <View style={styles.screenContainer}>
+      {showWelcome ? <WelcomeScreen /> : <ActiveScreen />}
+      <BluetoothPedalModal
+        visible={modalVisible}
+        type={modalType}
+        onClose={() => setModalVisible(false)}
+      />
+    </View>
   );
 }
 
