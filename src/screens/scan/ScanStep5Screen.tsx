@@ -297,9 +297,9 @@ export default function ScanStep5Screen({navigation}: Props) {
             {phase === 'scanning'
               ? 'Arahkan kamera ke barcode BPKB'
               : phase === 'confirm'
-              ? 'Tekan pedal untuk KIRIM, Volume Atas untuk ulang'
+              ? 'Tekan pedaluntuk KIRIM, Volume Atas untuk ulang'
               : phase === 'submitError'
-              ? 'Tekan pedal untuk kirim ulang, Volume Atas untuk ulang scan'
+              ? 'Tekan pedaluntuk kirim ulang, Volume Atas untuk ulang scan'
               : 'Memproses...'}
           </Text>
         )}

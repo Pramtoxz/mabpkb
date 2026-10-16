@@ -2,6 +2,10 @@ import type {NavigatorScreenParams} from '@react-navigation/native';
 
 export type HomeStackParamList = {
   HomeMain: undefined;
+  TeamDetail: undefined;
+  DealerList: undefined;
+  SopGuide: undefined;
+  PedalTest: undefined;
 };
 
 export type ScanStackParamList = {

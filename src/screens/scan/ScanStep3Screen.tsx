@@ -249,7 +249,7 @@ export default function ScanStep3Screen({navigation}: Props) {
         {hintExpanded && (
           <Text style={styles.hintDesc}>
             {phase === 'camera'
-              ? 'Tekan pedal (Volume Bawah) untuk foto & baca No Mesin'
+              ? 'Tekan pedal untuk foto & baca No Mesin'
               : phase === 'error'
               ? 'Tekan pedal untuk foto ulang, atau perbaiki manual lalu OK'
               : 'Memproses...'}

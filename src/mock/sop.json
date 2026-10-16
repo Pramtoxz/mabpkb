@@ -1,0 +1,26 @@
+[
+  {
+    "step": "Hal 1",
+    "title": "Identitas Pemilik",
+    "description": "Buka lembar pertama BPKB. Posisikan tepi kiri dokumen sejajar pada siku pembatas meja scanner.",
+    "check": "Nama pemilik dan alamat harus berada di dalam batas pandang kamera."
+  },
+  {
+    "step": "Hal 2",
+    "title": "Identitas Kendaraan",
+    "description": "Balik ke lembar kedua. Ini adalah lembar paling penting untuk pengenalan OCR nomor rangka dan mesin.",
+    "check": "Pastikan tidak ada silau pantulan lampu pada 17 digit nomor rangka."
+  },
+  {
+    "step": "Hal 3",
+    "title": "Identitas Lanjutan",
+    "description": "Posisikan lembar ketiga yang memuat data registrasi dan riwayat kepemilikan.",
+    "check": "Nomor BPKB dan nomor polisi harus terbaca kontras."
+  },
+  {
+    "step": "Hal 4",
+    "title": "Dokumen Persyaratan",
+    "description": "Lembar penutup yang memuat pengesahan pejabat kepolisian dan stempel resmi.",
+    "check": "Pastikan cap stempel tidak terpotong tepi bingkai."
+  }
+]

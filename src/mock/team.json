@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1",
+    "name": "Dito",
+    "role": "Lead Developer & Core Engineering",
+    "contribution": "Perancangan arsitektur pemindaian BPKB dan integrasi hardware pedal."
+  },
+  {
+    "id": "2",
+    "name": "Rafi",
+    "role": "Hardware & System Specialist",
+    "contribution": "Pengembangan bridge pedal kaki dan kalibrasi sensor scanner."
+  },
+  {
+    "id": "3",
+    "name": "Rezi",
+    "role": "UI/UX & Mobile Engineer",
+    "contribution": "Penyusunan alur antarmuka ergonomis untuk workstation operator."
+  },
+  {
+    "id": "4",
+    "name": "Surya",
+    "role": "Infrastructure & Database Admin",
+    "contribution": "Pengelolaan audit trail data BPKB dan pipeline sinkronisasi server."
+  }
+]

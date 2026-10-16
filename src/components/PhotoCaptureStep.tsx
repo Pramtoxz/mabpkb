@@ -93,7 +93,7 @@ export default function PhotoCaptureStep({
           <Text style={styles.hintDesc}>
             {phase === 'done'
               ? 'Tekan Volume Atas untuk ulang'
-              : 'Tekan pedal (Volume Bawah) untuk foto'}
+              : 'Tekan pedal untuk foto'}
           </Text>
         )}
       </TouchableOpacity>
