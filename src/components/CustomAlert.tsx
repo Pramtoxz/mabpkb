@@ -23,7 +23,13 @@ function AlertIcon({type}: {type: AlertType}) {
     return (
       <View style={[styles.iconWrap, styles.iconWrapSuccess]}>
         <Svg width={36} height={36} viewBox="0 0 24 24" fill="none">
-          <Path d="M20 6L9 17l-5-5" stroke={Colors.success} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+          <Path
+            d="M20 6L9 17l-5-5"
+            stroke={Colors.emeraldMint}
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </Svg>
       </View>
     );
@@ -33,7 +39,13 @@ function AlertIcon({type}: {type: AlertType}) {
     return (
       <View style={[styles.iconWrap, styles.iconWrapError]}>
         <Svg width={36} height={36} viewBox="0 0 24 24" fill="none">
-          <Path d="M18 6L6 18M6 6l12 12" stroke={Colors.error} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+          <Path
+            d="M18 6L6 18M6 6l12 12"
+            stroke={Colors.error}
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </Svg>
       </View>
     );
@@ -42,8 +54,20 @@ function AlertIcon({type}: {type: AlertType}) {
   return (
     <View style={[styles.iconWrap, styles.iconWrapAlert]}>
       <Svg width={36} height={36} viewBox="0 0 24 24" fill="none">
-        <Path d="M12 9v4M12 17h.01" stroke={Colors.primary} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-        <Path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke={Colors.primary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        <Path
+          d="M12 9v4M12 17h.01"
+          stroke={Colors.primary}
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <Path
+          d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+          stroke={Colors.primary}
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </Svg>
     </View>
   );
@@ -59,15 +83,7 @@ export default function CustomAlert({
   confirmText = 'OK',
   cancelText = 'Batal',
 }: CustomAlertProps) {
-  const isSuccess = type === 'success';
-  const isError = type === 'error';
   const isConfirm = type === 'confirm';
-
-  const gradientColors: [string, string] = isSuccess
-    ? [Colors.success, Colors.successDark]
-    : isError
-      ? [Colors.error, Colors.errorDark]
-      : [Colors.emerald, Colors.emeraldDark];
 
   return (
     <Modal
@@ -85,15 +101,21 @@ export default function CustomAlert({
         <Text style={styles.message}>{message}</Text>
 
         <View style={styles.buttonRow}>
-          {isConfirm && onCancel && (
-            <TouchableOpacity style={styles.cancelBtn} onPress={onCancel} activeOpacity={0.7}>
+          {isConfirm && Boolean(onCancel) && (
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={onCancel}
+              activeOpacity={0.7}>
               <Text style={styles.cancelText}>{cancelText}</Text>
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity style={[styles.confirmBtnWrap, !isConfirm && styles.confirmBtnFull]} onPress={onConfirm} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={[styles.confirmBtnWrap, !isConfirm && styles.confirmBtnFull]}
+            onPress={onConfirm}
+            activeOpacity={0.8}>
             <LinearGradient
-              colors={gradientColors}
+              colors={[Colors.primary, Colors.aciaxVioletDark]}
               start={{x: 0, y: 0}}
               end={{x: 1, y: 1}}
               style={styles.confirmBtn}>
@@ -109,30 +131,36 @@ export default function CustomAlert({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.surface,
-    borderRadius: 24,
-    padding: 28,
+    borderRadius: 16,
+    padding: 24,
     alignItems: 'center',
   },
   iconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   iconWrapSuccess: {
-    backgroundColor: Colors.successLight,
+    backgroundColor: Colors.surfaceAlt,
+    borderWidth: 1.5,
+    borderColor: Colors.emeraldMint,
   },
   iconWrapError: {
-    backgroundColor: Colors.errorLight,
+    backgroundColor: Colors.surfaceAlt,
+    borderWidth: 1.5,
+    borderColor: Colors.error,
   },
   iconWrapAlert: {
-    backgroundColor: Colors.accentLight,
+    backgroundColor: Colors.surfaceAlt,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
   },
   title: {
     ...Typography.h2,
-    color: Colors.textPrimary,
+    color: Colors.textHeadline,
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -141,7 +169,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 28,
+    marginBottom: 24,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -151,8 +179,8 @@ const styles = StyleSheet.create({
   cancelBtn: {
     flex: 1,
     height: 48,
-    borderRadius: 14,
-    borderWidth: 1.5,
+    borderRadius: 10,
+    borderWidth: 1,
     borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
@@ -161,12 +189,11 @@ const styles = StyleSheet.create({
   cancelText: {
     ...Typography.label,
     fontSize: 15,
-    color: Colors.textPrimary,
-    fontFamily: 'Inter-SemiBold',
+    color: Colors.textSecondary,
   },
   confirmBtnWrap: {
     flex: 1,
-    borderRadius: 14,
+    borderRadius: 10,
     overflow: 'hidden',
   },
   confirmBtnFull: {
@@ -174,14 +201,13 @@ const styles = StyleSheet.create({
   },
   confirmBtn: {
     height: 48,
-    borderRadius: 14,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   confirmText: {
     ...Typography.label,
     fontSize: 15,
-    color: Colors.textOnAccent,
-    fontFamily: 'Inter-SemiBold',
+    color: Colors.white,
   },
 });

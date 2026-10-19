@@ -1,18 +1,29 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useEffect} from 'react';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
+import {Mat, DataTypes} from 'react-native-fast-opencv';
 import type {ScanStackParamList} from '../../navigation/types';
 import {useScan} from '../../contexts/ScanContext';
 import PhotoCaptureStep from '../../components/PhotoCaptureStep';
 
 type Props = NativeStackScreenProps<ScanStackParamList, 'ScanStep1'>;
 
-export default function ScanStep1Screen({navigation}: Props) {
+export default function ScanStep1Screen({navigation, route}: Props) {
   const {setPhoto1} = useScan();
 
-  const handleNext = useCallback(
-    () => navigation.navigate('ScanStep2'),
-    [navigation],
-  );
+  useEffect(() => {
+    try {
+      const dummy = Mat.create(1, 1, DataTypes.CV_8UC1);
+      dummy.release();
+    } catch {}
+  }, []);
+
+  const handleNext = useCallback(() => {
+    if (route.params?.returnToReview) {
+      navigation.navigate('ScanReview');
+      return;
+    }
+    navigation.navigate('ScanStep2');
+  }, [navigation, route.params]);
 
   return (
     <PhotoCaptureStep

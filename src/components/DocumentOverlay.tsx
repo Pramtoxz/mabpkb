@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import {View, Text, StyleSheet, useWindowDimensions} from 'react-native';
 import Animated, {
   useSharedValue,
@@ -56,6 +56,7 @@ export default function DocumentOverlay({
   label,
 }: DocumentOverlayProps) {
   const {width: screenWidth} = useWindowDimensions();
+  const [containerWidth, setContainerWidth] = useState(screenWidth);
 
   const pulseOpacity = useSharedValue(1);
   const laserProgress = useSharedValue(0);
@@ -87,7 +88,8 @@ export default function DocumentOverlay({
     : DOCUMENT_VIEWPORT_WIDTH_PERCENT;
   const ratio = isBarcode ? BARCODE_ASPECT_RATIO : DOCUMENT_ASPECT_RATIO;
 
-  const cutoutWidth = screenWidth * widthPercent;
+  const baseWidth = containerWidth > 0 ? containerWidth : screenWidth;
+  const cutoutWidth = baseWidth * widthPercent;
   const cutoutHeight = cutoutWidth * ratio;
 
   const laserStyle = useAnimatedStyle(() => ({
@@ -100,7 +102,15 @@ export default function DocumentOverlay({
   const displayLabel = label ?? defaultLabel;
 
   return (
-    <View style={styles.overlay} pointerEvents="none">
+    <View
+      style={styles.overlay}
+      pointerEvents="none"
+      onLayout={e => {
+        const w = e.nativeEvent.layout.width;
+        if (w > 0) {
+          setContainerWidth(w);
+        }
+      }}>
       <View style={styles.dimTop} />
 
       <View style={styles.middleRow}>

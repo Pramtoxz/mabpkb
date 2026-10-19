@@ -29,13 +29,20 @@ function NavigatorContent() {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<'connected' | 'pedal_pressed'>('connected');
   const prevConnectedRef = useRef<boolean | null>(null);
+  const lastModalTriggerRef = useRef<number>(0);
 
   useEffect(() => {
     if (prevConnectedRef.current === null) {
       prevConnectedRef.current = isConnected;
       return;
     }
-    if (prevConnectedRef.current === false && isConnected === true) {
+    const now = Date.now();
+    if (
+      prevConnectedRef.current === false &&
+      isConnected === true &&
+      now - lastModalTriggerRef.current > 10000
+    ) {
+      lastModalTriggerRef.current = now;
       setModalType('connected');
       setModalVisible(true);
     }
@@ -43,8 +50,12 @@ function NavigatorContent() {
   }, [isConnected]);
 
   const handlePedalOutside = useCallback(() => {
-    setModalType('pedal_pressed');
-    setModalVisible(true);
+    const now = Date.now();
+    if (now - lastModalTriggerRef.current > 4000) {
+      lastModalTriggerRef.current = now;
+      setModalType('pedal_pressed');
+      setModalVisible(true);
+    }
   }, []);
 
   useHardwareKey(

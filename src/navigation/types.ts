@@ -13,11 +13,12 @@ export type HomeStackParamList = {
 };
 
 export type ScanStackParamList = {
-  ScanStep1: undefined;
-  ScanStep2: undefined;
-  ScanStep3: undefined;
-  ScanStep4: undefined;
+  ScanStep1: {returnToReview?: boolean} | undefined;
+  ScanStep2: {returnToReview?: boolean} | undefined;
+  ScanStep3: {returnToReview?: boolean} | undefined;
+  ScanStep4: {returnToReview?: boolean} | undefined;
   ScanStep5: undefined;
+  ScanReview: undefined;
 };
 
 export type BatchStackParamList = {

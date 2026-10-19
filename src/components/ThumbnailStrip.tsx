@@ -6,8 +6,10 @@ import {
   StyleSheet,
   Text,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {ResumableZoom} from 'react-native-zoom-toolkit';
 import Svg, {Path} from 'react-native-svg';
 import {Colors, Radius, Spacing} from '../constants';
@@ -34,6 +36,10 @@ export default function ThumbnailStrip({
   const navigation = useNavigation<any>();
   const {state, retakeFromStep} = useScan();
   const [previewStep, setPreviewStep] = useState<number | null>(null);
+  const [containerSize, setContainerSize] = useState<{width: number; height: number}>({
+    width: 0,
+    height: 0,
+  });
   const photos = [state.photo1, state.photo2, state.photo3, state.photo4];
 
   const handleTap = (step: number) => {
@@ -87,7 +93,11 @@ export default function ThumbnailStrip({
                   {SLOT_LABELS[i]}
                 </Text>
               )}
-              {isFilled && (
+              {isFilled && photo?.isProcessing ? (
+                <View style={styles.cookingBadge}>
+                  <ActivityIndicator size={10} color={Colors.emeraldMint} />
+                </View>
+              ) : isFilled ? (
                 <View style={styles.checkBadge}>
                   <Svg width={10} height={10} viewBox="0 0 24 24" fill="none">
                     <Path
@@ -99,7 +109,7 @@ export default function ThumbnailStrip({
                     />
                   </Svg>
                 </View>
-              )}
+              ) : null}
             </TouchableOpacity>
           );
         })}
@@ -110,66 +120,89 @@ export default function ThumbnailStrip({
         transparent
         animationType="fade"
         onRequestClose={() => setPreviewStep(null)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalTitleContainer}>
-                <View style={styles.modalTitleRow}>
-                  <Text style={styles.modalTitle}>Halaman {previewStep}</Text>
-                  <View style={styles.zoomHintPill}>
-                    <Text style={styles.zoomHintText}>Pinch / Zoom 120 FPS</Text>
+        <GestureHandlerRootView style={styles.flexRoot}>
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalTitleContainer}>
+                  <View style={styles.modalTitleRow}>
+                    <Text style={styles.modalTitle}>Halaman {previewStep}</Text>
+                    <View style={styles.zoomHintPill}>
+                      <Text style={styles.zoomHintText}>Pinch / Zoom 120 FPS</Text>
+                    </View>
                   </View>
+                  <Text style={styles.modalSubtitle}>
+                    {previewStep != null ? STEP_TITLES[previewStep - 1] : ''}
+                  </Text>
                 </View>
-                <Text style={styles.modalSubtitle}>
-                  {previewStep != null ? STEP_TITLES[previewStep - 1] : ''}
-                </Text>
+
+                <TouchableOpacity
+                  onPress={() => setPreviewStep(null)}
+                  style={styles.closeBtn}
+                  hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
+                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M18 6L6 18M6 6l12 12"
+                      stroke={Colors.textSecondary}
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                </TouchableOpacity>
               </View>
 
-              <TouchableOpacity
-                onPress={() => setPreviewStep(null)}
-                style={styles.closeBtn}
-                hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
-                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                  <Path
-                    d="M18 6L6 18M6 6l12 12"
-                    stroke={Colors.textSecondary}
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </Svg>
-              </TouchableOpacity>
-            </View>
+              {previewPhoto?.uri ? (
+                <View
+                  style={styles.previewImageContainer}
+                  onLayout={e => {
+                    const {width, height} = e.nativeEvent.layout;
+                    if (width > 0 && height > 0) {
+                      setContainerSize({
+                        width: Math.round(width),
+                        height: Math.round(height),
+                      });
+                    }
+                  }}>
+                  {containerSize.width > 0 && containerSize.height > 0 ? (
+                    <ResumableZoom maxScale={5} style={styles.zoomContainer}>
+                      <Image
+                        source={{uri: previewPhoto.uri}}
+                        style={{
+                          width: containerSize.width,
+                          height: containerSize.height,
+                        }}
+                        resizeMode="contain"
+                      />
+                    </ResumableZoom>
+                  ) : (
+                    <Image
+                      source={{uri: previewPhoto.uri}}
+                      style={styles.previewImage}
+                      resizeMode="contain"
+                    />
+                  )}
+                </View>
+              ) : null}
 
-            {previewPhoto?.uri ? (
-              <View style={styles.previewImageContainer}>
-                <ResumableZoom maxScale={5} style={styles.zoomContainer}>
-                  <Image
-                    source={{uri: previewPhoto.uri}}
-                    style={styles.previewImage}
-                    resizeMode="contain"
-                  />
-                </ResumableZoom>
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setPreviewStep(null)}
+                  activeOpacity={0.75}>
+                  <Text style={styles.cancelBtnText}>Tutup</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.retakeBtn}
+                  onPress={() => previewStep && handleRetakeConfirm(previewStep)}
+                  activeOpacity={0.85}>
+                  <Text style={styles.retakeBtnText}>Foto Ulang</Text>
+                </TouchableOpacity>
               </View>
-            ) : null}
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => setPreviewStep(null)}
-                activeOpacity={0.75}>
-                <Text style={styles.cancelBtnText}>Tutup</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.retakeBtn}
-                onPress={() => previewStep && handleRetakeConfirm(previewStep)}
-                activeOpacity={0.85}>
-                <Text style={styles.retakeBtnText}>Foto Ulang</Text>
-              </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </GestureHandlerRootView>
       </Modal>
     </>
   );
@@ -178,6 +211,9 @@ export default function ThumbnailStrip({
 const THUMB_SIZE = 64;
 
 const styles = StyleSheet.create({
+  flexRoot: {
+    flex: 1,
+  },
   strip: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -239,6 +275,19 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: Radius.full,
     backgroundColor: Colors.emeraldMint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cookingBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 18,
+    height: 18,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.neutral,
+    borderWidth: 1.5,
+    borderColor: Colors.emeraldMint,
     alignItems: 'center',
     justifyContent: 'center',
   },

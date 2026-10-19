@@ -26,9 +26,6 @@ export async function apiRequest<T>(
   }
 
   const fullUrl = `${Config.API_BASE_URL}${endpoint}`;
-  console.log('[API] URL:', fullUrl);
-  console.log('[API] SECRET_KEY:', Config.SECRET_KEY);
-
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 15000);
 
@@ -41,17 +38,13 @@ export async function apiRequest<T>(
       signal: controller.signal,
     });
   } catch (err) {
-    console.log('[API] NETWORK ERROR:', err);
     throw err;
   } finally {
     clearTimeout(timeoutId);
   }
 
-  console.log('[API] STATUS:', response.status);
-
   if (!response.ok) {
     const errorData = await response.json().catch(() => null);
-    console.log('[API] ERROR DATA:', errorData);
     throw {
       status: response.status,
       data: errorData,
@@ -59,6 +52,5 @@ export async function apiRequest<T>(
   }
 
   const data = await response.json();
-  console.log('[API] SUCCESS:', data);
   return data;
 }

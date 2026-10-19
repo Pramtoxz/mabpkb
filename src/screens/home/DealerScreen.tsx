@@ -74,7 +74,7 @@ export default function DealerScreen() {
         </TouchableOpacity>
         <View style={styles.topBarTitleBox}>
           <Text style={styles.topBarSubtitle}>Panduan Sortir BPKB</Text>
-          <Text style={styles.topBarTitle}>Cabang Dealer Menara Agung</Text>
+          <Text style={styles.topBarTitle}>List Dealer</Text>
         </View>
         <View style={styles.topBarRightSlot} />
       </View>

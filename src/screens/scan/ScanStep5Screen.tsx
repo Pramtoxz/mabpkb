@@ -1,14 +1,12 @@
-import React, {useCallback, useRef, useState} from 'react';
+import React, {useCallback, useRef, useState, useEffect} from 'react';
 import {
   View,
   Text,
   TextInput,
   StyleSheet,
   Pressable,
-  TouchableOpacity,
   AppState,
   AppStateStatus,
-  useWindowDimensions,
 } from 'react-native';
 import {
   Camera,
@@ -21,23 +19,16 @@ import {useIsFocused} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {ScanStackParamList} from '../../navigation/types';
-import LottieView from 'lottie-react-native';
 import {Colors, Typography, Spacing, Radius} from '../../constants';
 import {useScan} from '../../contexts/ScanContext';
-import {useTabNav} from '../../contexts/TabNavContext';
-import {useAlert} from '../../contexts/AlertContext';
 import {useSound} from '../../hooks/useSound';
 import {useHaptic} from '../../hooks/useHaptic';
-import {useHardwareKey} from '../../hooks/useHardwareKey';
-import {processBpkb} from '../../api';
 import ScanStepIndicator from '../../components/ScanStepIndicator';
+import ScanTopDealerAlert from '../../components/ScanTopDealerAlert';
 import ThumbnailStrip from '../../components/ThumbnailStrip';
 import DocumentOverlay from '../../components/DocumentOverlay';
-import {CheckIcon, XIcon} from '../../components/TabIcons';
-import ConfettiCannon from 'react-native-confetti-cannon';
 
 type Props = NativeStackScreenProps<ScanStackParamList, 'ScanStep5'>;
-type Phase = 'scanning' | 'confirm' | 'submitting' | 'submitError';
 
 const CODE_TYPES = [
   'qr',
@@ -51,111 +42,50 @@ const CODE_TYPES = [
 
 export default function ScanStep5Screen({navigation}: Props) {
   const insets = useSafeAreaInsets();
-  const {state, setNobpkb, resetScan} = useScan();
-  const {setActiveTab, setPendingTrackId} = useTabNav();
-  const {showAlert} = useAlert();
+  const {state, setNobpkb} = useScan();
   const {play: playSound} = useSound();
   const {trigger: haptic} = useHaptic();
   const device = useCameraDevice('back');
   const {hasPermission, requestPermission} = useCameraPermission();
-  const [phase, setPhase] = useState<Phase>('scanning');
-  const [hintExpanded, setHintExpanded] = useState(true);
-  const [resultText, setResultText] = useState('');
   const [manualInput, setManualInput] = useState('');
-  const [errorText, setErrorText] = useState('');
-  const [showConfetti, setShowConfetti] = useState(false);
-  const {width: screenWidth} = useWindowDimensions();
-  const isSubmittingRef = useRef(false);
   const hasScannedRef = useRef(false);
   const isFocused = useIsFocused();
   const [isForeground, setIsForeground] = useState(
     AppState.currentState === 'active',
   );
 
-  React.useEffect(() => {
+  useEffect(() => {
     const sub = AppState.addEventListener('change', (status: AppStateStatus) => {
       setIsForeground(status === 'active');
     });
     return () => sub.remove();
   }, []);
 
-  const isCameraActive = isFocused && isForeground && phase === 'scanning';
+  useEffect(() => {
+    if (isFocused) {
+      hasScannedRef.current = false;
+      setManualInput('');
+    }
+  }, [isFocused]);
+
+  const isCameraActive = isFocused && isForeground;
   const handleCameraError = useCallback((_error: CameraRuntimeError) => {}, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!hasPermission) {
       requestPermission();
     }
   }, [hasPermission, requestPermission]);
 
-  const doSubmit = useCallback(
-    async (nobpkb: string) => {
-      if (isSubmittingRef.current) {
-        return;
-      }
-      if (!state.photo1 || !state.photo2 || !state.photo3 || !state.photo4) {
-        setErrorText('Foto belum lengkap. Ulangi scan dari awal.');
-        haptic('error');
-        playSound('error');
-        setPhase('submitError');
-        return;
-      }
-
-      isSubmittingRef.current = true;
-      setPhase('submitting');
-      try {
-        const result = await processBpkb(state.nomesin, nobpkb, [
-          state.photo1,
-          state.photo2,
-          state.photo3,
-          state.photo4,
-        ]);
-
-        haptic('submit');
-        playSound('submit');
-        setShowConfetti(true);
-        showAlert({
-          title: 'Berhasil',
-          message: `BPKB sedang diproses.\nTrack ID: ${result.track_id}`,
-          type: 'success',
-          confirmText: 'Lacak Status',
-          cancelText: 'Scan Lagi',
-          onConfirm: () => {
-            setPendingTrackId(result.track_id);
-            resetScan();
-            setPhase('scanning');
-            setActiveTab(0);
-          },
-          onCancel: () => {
-            resetScan();
-            setPhase('scanning');
-            navigation.navigate('ScanStep1');
-          },
-        });
-      } catch (error: any) {
-        const message = error?.data?.errors
-          ? Object.values(error.data.errors).flat().join('\n')
-          : error?.data?.message || 'Gagal mengirim ke server.';
-        setErrorText(message);
-        haptic('error');
-        playSound('error');
-        setPhase('submitError');
-      } finally {
-        isSubmittingRef.current = false;
-      }
-    },
-    [navigation, playSound, haptic, resetScan, setActiveTab, setPendingTrackId, showAlert, state],
-  );
-
   const acceptNobpkb = useCallback(
     (value: string) => {
       setNobpkb(value);
-      setResultText(value);
       haptic('detect');
       playSound('beep');
-      setPhase('confirm');
+      hasScannedRef.current = false;
+      navigation.navigate('ScanReview');
     },
-    [playSound, haptic, setNobpkb],
+    [haptic, navigation, playSound, setNobpkb],
   );
 
   const codeScanner = useCodeScanner({
@@ -182,45 +112,20 @@ export default function ScanStep5Screen({navigation}: Props) {
     acceptNobpkb(trimmed);
   }, [acceptNobpkb, manualInput]);
 
-  const handleRetake = useCallback(() => {
-    hasScannedRef.current = false;
-    setResultText('');
-    setManualInput('');
-    setErrorText('');
-    setPhase('scanning');
-  }, []);
-
-  const handleSend = useCallback(() => {
-    doSubmit(resultText);
-  }, [doSubmit, resultText]);
-
-  const handleRetrySubmit = useCallback(() => {
-    if (resultText) {
-      doSubmit(resultText);
-    } else {
-      handleRetake();
-    }
-  }, [doSubmit, handleRetake, resultText]);
-
-  useHardwareKey(handleSend, phase === 'confirm', 'volumeDown');
-  useHardwareKey(handleRetrySubmit, phase === 'submitError', 'volumeDown');
-  useHardwareKey(
-    handleRetake,
-    phase === 'confirm' || phase === 'submitError',
-    'volumeUp',
-  );
-
   return (
-    <View style={[styles.container, {paddingBottom: Spacing.xxl + insets.bottom}]}>
+    <View style={[styles.container, {paddingBottom: insets.bottom + Spacing.sm}]}>
       <ScanStepIndicator currentStep={5} totalSteps={5} />
+
+      {state.dealer ? (
+        <ScanTopDealerAlert
+          dealerName={state.dealer.nm_dealer}
+          paymentType={state.dealer.payment_type}
+        />
+      ) : null}
 
       <View style={styles.cameraArea}>
         {hasPermission && device != null && (
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              phase !== 'scanning' && styles.hiddenCamera,
-            ]}>
+          <View style={StyleSheet.absoluteFill}>
             <Camera
               style={StyleSheet.absoluteFill}
               device={device}
@@ -232,93 +137,27 @@ export default function ScanStep5Screen({navigation}: Props) {
             <DocumentOverlay variant="barcode" />
           </View>
         )}
-        {phase === 'confirm' && (
-          <View style={styles.doneCard}>
-            <CheckIcon size={48} color={Colors.success} />
-            <Text style={styles.resultValue}>{resultText}</Text>
-            <View style={styles.summary}>
-              <Text style={styles.summaryLine}>
-                No Mesin: {state.nomesin || '-'}
-              </Text>
-              <Text style={styles.summaryLine}>
-                Dealer: {state.dealer?.nm_dealer ?? '-'}
-              </Text>
-            </View>
-          </View>
-        )}
-        {phase === 'submitting' && (
-          <View style={styles.processingCard}>
-            <LottieView
-              source={require('../../assets/lottie/business.json')}
-              autoPlay
-              loop
-              style={styles.lottieRocket}
-            />
-            <Text style={styles.processingText}>Cuuusss Terbang...</Text>
-          </View>
-        )}
-        {phase === 'submitError' && (
-          <View style={styles.errorCard}>
-            <XIcon size={48} color={Colors.error} />
-            <Text style={styles.errorText}>{errorText}</Text>
-          </View>
-        )}
       </View>
 
-      {phase === 'scanning' && (
-        <View style={styles.manualSection}>
-          <Text style={styles.manualLabel}>Atau masukkan No BPKB manual:</Text>
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.input}
-              placeholder="Contoh: BPKB-2026-001"
-              placeholderTextColor={Colors.border}
-              value={manualInput}
-              onChangeText={setManualInput}
-              autoCapitalize="characters"
-              autoCorrect={false}
-            />
-            <Pressable style={styles.submitBtn} onPress={handleManualSubmit}>
-              <Text style={styles.submitBtnText}>OK</Text>
-            </Pressable>
-          </View>
+      <View style={styles.manualSection}>
+        <Text style={styles.manualLabel}>Atau masukkan No BPKB manual:</Text>
+        <View style={styles.inputRow}>
+          <TextInput
+            style={styles.input}
+            placeholder="Contoh: BPKB-2026-001"
+            placeholderTextColor={Colors.border}
+            value={manualInput}
+            onChangeText={setManualInput}
+            autoCapitalize="characters"
+            autoCorrect={false}
+          />
+          <Pressable style={styles.submitBtn} onPress={handleManualSubmit}>
+            <Text style={styles.submitBtnText}>OK</Text>
+          </Pressable>
         </View>
-      )}
+      </View>
 
       <ThumbnailStrip currentStep={5} />
-
-      <TouchableOpacity
-        style={styles.hintCard}
-        onPress={() => setHintExpanded(h => !h)}
-        activeOpacity={0.8}>
-        <View style={styles.hintHeader}>
-          <Text style={styles.hintTitle} numberOfLines={1}>
-            Barcode
-          </Text>
-          <Text style={styles.hintChevron}>{hintExpanded ? '▾' : '▸'}</Text>
-        </View>
-        {hintExpanded && (
-          <Text style={styles.hintDesc}>
-            {phase === 'scanning'
-              ? 'Arahkan kamera ke barcode BPKB'
-              : phase === 'confirm'
-              ? 'Tekan pedaluntuk KIRIM, Volume Atas untuk ulang'
-              : phase === 'submitError'
-              ? 'Tekan pedaluntuk kirim ulang, Volume Atas untuk ulang scan'
-              : 'Memproses...'}
-          </Text>
-        )}
-      </TouchableOpacity>
-
-      {showConfetti && (
-        <ConfettiCannon
-          count={100}
-          origin={{x: screenWidth / 2, y: -20}}
-          fadeOut
-          fallSpeed={2800}
-          explosionSpeed={350}
-        />
-      )}
     </View>
   );
 }
@@ -334,67 +173,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     overflow: 'hidden',
     marginBottom: Spacing.sm,
-  },
-  processingCard: {
-    flex: 1,
-    backgroundColor: Colors.accentLight,
-    borderRadius: Radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: Colors.accent,
-    gap: 12,
-  },
-  lottieRocket: {
-    width: 120,
-    height: 120,
-  },
-  processingText: {
-    ...Typography.h3,
-    color: Colors.accent,
-  },
-  doneCard: {
-    flex: 1,
-    backgroundColor: Colors.successLight,
-    borderRadius: Radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: Colors.success,
-    gap: 8,
-    paddingHorizontal: 16,
-  },
-  resultValue: {
-    fontFamily: 'JetBrainsMono-Medium',
-    fontSize: 24,
-    lineHeight: 32,
-    color: Colors.success,
-    textAlign: 'center',
-  },
-  summary: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  summaryLine: {
-    ...Typography.bodySmall,
-    color: Colors.success,
-    textAlign: 'center',
-  },
-  errorCard: {
-    flex: 1,
-    backgroundColor: Colors.errorLight,
-    borderRadius: Radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: Colors.error,
-    gap: 8,
-    paddingHorizontal: 16,
-  },
-  errorText: {
-    ...Typography.h3,
-    color: Colors.error,
-    textAlign: 'center',
   },
   manualSection: {
     marginBottom: Spacing.md,
@@ -421,7 +199,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   submitBtn: {
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.primary,
     borderRadius: Radius.md,
     paddingHorizontal: 20,
     justifyContent: 'center',
@@ -429,43 +207,7 @@ const styles = StyleSheet.create({
   submitBtnText: {
     ...Typography.label,
     fontSize: 16,
-    color: Colors.textOnAccent,
-    fontFamily: 'Inter-SemiBold',
-  },
-  hintCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginTop: Spacing.sm,
-  },
-  hintHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  hintTitle: {
-    ...Typography.label,
-    fontSize: 15,
-    color: Colors.textPrimary,
-    fontFamily: 'Inter-SemiBold',
-    flex: 1,
-  },
-  hintChevron: {
-    ...Typography.label,
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginLeft: 8,
-  },
-  hintDesc: {
-    ...Typography.bodySmall,
-    color: Colors.textSecondary,
-    marginTop: 6,
-    textAlign: 'left',
-  },
-  hiddenCamera: {
-    opacity: 0,
-    zIndex: -1,
+    color: Colors.white,
+    fontFamily: 'Poppins-Bold',
   },
 });

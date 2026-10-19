@@ -60,7 +60,7 @@ export default function TeamScreen() {
     } catch {
       showAlert({
         title: 'Instagram',
-        message: `Terjadi kesalahan saat membuka profil @${instagram}`,
+        message: `Gagal membuka profil @${instagram}. Coba lagi ya.`,
         type: 'error',
       });
     }
@@ -86,7 +86,7 @@ export default function TeamScreen() {
             />
           </Svg>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Tentang Kami</Text>
+        <Text style={styles.headerTitle}>Dapur Kami</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -99,11 +99,11 @@ export default function TeamScreen() {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.appTitle}>Tim Development</Text>
-          <Text style={styles.appDesc}>
-            Aplikasi Sistem Digitalisasi & Pemindaian Berkas BPKB Terintegrasi Pedal Bluetooth
-          </Text>
           <Text style={styles.companyName}>PT Menara Agung</Text>
+          <Text style={styles.appTitle}>We Are Cooking</Text>
+          <Text style={styles.appDesc}>
+            Tim dev yang lagi masak sistem digitalisasi & scan BPKB dengan pedal Bluetooth
+          </Text>
         </View>
 
         <View style={styles.cardsContainer}>
@@ -237,7 +237,7 @@ export default function TeamScreen() {
                     <View style={styles.modalDivider} />
 
                     <Text style={styles.modalSectionLabel}>
-                      TANGGUNG JAWAB TEKNIS
+                      KEBAGIAN MASAK APA
                     </Text>
 
                     <View style={styles.modalPointsContainer}>
@@ -293,7 +293,7 @@ export default function TeamScreen() {
                           />
                         </Svg>
                         <Text style={styles.modalContactText}>
-                          Lihat Profil Instagram
+                          Mampir ke Instagram
                         </Text>
                       </View>
                       <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
     borderWidth: 1.5,
     borderColor: Colors.primary,
     shadowColor: Colors.shadowDark,
@@ -380,9 +380,10 @@ const styles = StyleSheet.create({
   },
   appTitle: {
     fontFamily: Fonts.heading.bold,
-    fontSize: 18,
+    fontSize: 22,
+    lineHeight: 28,
     color: Colors.textHeadline,
-    marginBottom: 2,
+    marginBottom: 3,
   },
   appDesc: {
     fontFamily: Fonts.body.regular,
@@ -394,11 +395,11 @@ const styles = StyleSheet.create({
   },
   companyName: {
     fontFamily: Fonts.heading.bold,
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.primary,
     textAlign: 'center',
     lineHeight: 18,
-    marginTop: 3,
+    marginBottom: 2,
   },
   cardsContainer: {
     gap: 10,
