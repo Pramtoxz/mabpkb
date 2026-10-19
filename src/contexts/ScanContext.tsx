@@ -1,14 +1,17 @@
 import React, {createContext, useContext, useState, useCallback} from 'react';
+import {scanQueue} from '../utils/scanQueue';
 
 export interface ScanImage {
   uri: string;
   type: string;
   name: string;
+  isProcessing?: boolean;
 }
 
 export interface DealerData {
   fk_dealer: string;
   nm_dealer: string;
+  payment_type?: 'CASH' | 'CREDIT';
 }
 
 interface ScanState {
@@ -72,7 +75,10 @@ export function ScanProvider({children}: {children: React.ReactNode}) {
       }
     });
   }, []);
-  const resetScan = useCallback(() => setState(initialState), []);
+  const resetScan = useCallback(() => {
+    scanQueue.clear();
+    setState(initialState);
+  }, []);
 
   return (
     <ScanContext.Provider

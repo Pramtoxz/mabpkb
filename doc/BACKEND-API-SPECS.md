@@ -240,3 +240,4 @@ Agar tim backend tidak perlu menebak-nebak (*trial-and-error*), berikut adalah p
      AND handover_id IS NULL;
    ```
 5. Otomatis tumpukan pada **Rekap Sortir** untuk cabang tersebut akan ter-reset/berkurang sesuai berkas yang telah diserahkan.
+

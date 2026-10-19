@@ -1,17 +1,19 @@
 import React from 'react';
-import {View, Text, StyleSheet, Image} from 'react-native';
+import {View, Text, StyleSheet, Image, TouchableOpacity} from 'react-native';
 import {Colors, Images, Spacing, Radius} from '../../../constants';
 
 interface HomeHeaderProps {
   appName?: string;
   greeting?: string;
   operatorName?: string;
+  onPressMascot?: () => void;
 }
 
 export default function HomeHeader({
   appName = 'ACIAX MABPKB',
   greeting = 'Hey,',
   operatorName = 'MA People',
+  onPressMascot,
 }: HomeHeaderProps) {
   return (
     <View style={styles.container}>
@@ -21,13 +23,21 @@ export default function HomeHeader({
         <Text style={styles.operatorText}>{operatorName}</Text>
       </View>
 
-      <View style={styles.avatarCard}>
+      <TouchableOpacity
+        style={styles.avatarCard}
+        onPress={onPressMascot}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel="Mulai Panduan">
         <Image
           source={Images.scannerMascot}
           style={styles.avatarImage}
           resizeMode="cover"
         />
-      </View>
+        <View style={styles.guideBadge}>
+          <Text style={styles.guideBadgeText}>Panduan</Text>
+        </View>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -85,4 +95,26 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: Radius.lg,
   },
+  guideBadge: {
+    position: 'absolute',
+    bottom: -6,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.surface,
+    shadowColor: Colors.black,
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  guideBadgeText: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 9,
+    color: Colors.white,
+    letterSpacing: 0.3,
+  },
 });
+

@@ -32,6 +32,7 @@ import {useHaptic} from '../../hooks/useHaptic';
 import {useBpkbStream} from '../../hooks/useBpkbStream';
 import {
   trackBpkb,
+  getBpkbHistory,
   type BpkbTrackResponse,
   type BpkbHistoryItem,
 } from '../../api/endpoints';
@@ -83,6 +84,9 @@ export default function TrackStatusScreen() {
     startDate: undefined,
     endDate: undefined,
   });
+  const [historyList, setHistoryList] = useState<BpkbHistoryItem[]>(
+    mockHistory as BpkbHistoryItem[],
+  );
 
   const {data} = useBpkbStream(trackId);
   const pulse = useSharedValue(0);
@@ -141,6 +145,23 @@ export default function TrackStatusScreen() {
     }
   }, [trackId, fetchDetail]);
 
+  const fetchHistory = useCallback(async () => {
+    try {
+      const list = await getBpkbHistory();
+      if (list && list.length > 0) {
+        setHistoryList(list);
+      }
+    } catch {
+      setHistoryList(mockHistory as BpkbHistoryItem[]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isFocused && !trackId) {
+      fetchHistory();
+    }
+  }, [isFocused, trackId, fetchHistory]);
+
   const pulseStyle = useAnimatedStyle(() => ({opacity: pulse.value}));
 
   const currentStageIdx = getStageIndex(data?.stage ?? trackDetail?.stage ?? 'pending');
@@ -182,13 +203,14 @@ export default function TrackStatusScreen() {
   }, [isFocused, trackId, isCompleted, isFailed, setIsPedalIntercepted]);
 
   const handleRefresh = useCallback(async () => {
-    if (!trackId) {
-      return;
-    }
     setRefreshing(true);
-    await fetchDetail(trackId);
+    if (trackId) {
+      await fetchDetail(trackId);
+    } else {
+      await fetchHistory();
+    }
     setRefreshing(false);
-  }, [trackId, fetchDetail]);
+  }, [trackId, fetchDetail, fetchHistory]);
 
   const handleBack = () => {
     if (trackId) {
@@ -202,7 +224,7 @@ export default function TrackStatusScreen() {
   };
 
   const filteredHistory = useMemo(() => {
-    let list: BpkbHistoryItem[] = mockHistory as BpkbHistoryItem[];
+    let list: BpkbHistoryItem[] = historyList;
     const q = search.trim().toLowerCase();
     if (q) {
       list = list.filter(
@@ -652,7 +674,14 @@ export default function TrackStatusScreen() {
           styles.scrollContent,
           {paddingBottom: Spacing.huge + insets.bottom},
         ]}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={Colors.primary}
+          />
+        }>
         {activeSegment === 'history' ? (
           filteredHistory.length === 0 ? (
             <View style={styles.emptyCard}>
@@ -732,7 +761,7 @@ export default function TrackStatusScreen() {
                 {filteredHistory.length} Berkas Siap Diambil
               </Text>
               <Text style={styles.sortingOverviewDesc}>
-                Berkas telah tersortir otomatis per cabang untuk mempermudah serah terima.
+                Berkas telah tersortir otomatis per dealer untuk mempermudah serah terima.
               </Text>
             </View>
 

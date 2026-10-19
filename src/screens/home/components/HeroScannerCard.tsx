@@ -45,7 +45,7 @@ export default function HeroScannerCard({onPressScan}: HeroScannerCardProps) {
 
       <View style={styles.imageContainer}>
         <Image
-          source={Images.scanner3DDevice}
+          source={isConnected ? Images.scannerOn : Images.scannerOff}
           style={styles.scannerImage}
           resizeMode="contain"
         />
@@ -190,13 +190,13 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     width: '100%',
-    height: 125,
+    height: 145,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.xs,
   },
   scannerImage: {
-    width: '90%',
+    width: '100%',
     height: '100%',
   },
   headline: {

@@ -17,19 +17,19 @@ export default function ShiftProductivityCard({
   const remaining = Math.max(safeTarget - completed, 0);
 
   return (
-    <View style={styles.card}>
-      <View style={styles.leftCol}>
-        <Text style={styles.categoryTitle}>Shift Productivity Card</Text>
-        <Text style={styles.targetLabel}>Target Hari Ini (08:00 - 16:00):</Text>
-        <View style={styles.numberRow}>
-          <Text style={styles.completedNumber}>{completed}</Text>
-          <Text style={styles.targetNumber}> / {safeTarget}</Text>
-        </View>
-        <Text style={styles.unitText}>BPKB Selesai</Text>
-        <View style={styles.remainingBadge}>
-          <Text style={styles.remainingText}>Tersisa {remaining} Dokumen</Text>
-        </View>
-      </View>
+   <View style={styles.card}>
+  <View style={styles.leftCol}>
+    <Text style={styles.categoryTitle}>Lagi Masak Hari Ini</Text>
+    <Text style={styles.targetLabel}>Progres kamu</Text>
+    <View style={styles.numberRow}>
+      <Text style={styles.completedNumber}>{completed}</Text>
+      <Text style={styles.targetNumber}> / {safeTarget}</Text>
+    </View>
+    <Text style={styles.unitText}>BPKB Kelar</Text>
+    <View style={styles.remainingBadge}>
+      <Text style={styles.remainingText}>Tinggal {remaining} lagi</Text>
+    </View>
+  </View>
 
       <View style={styles.rightCol}>
         <View style={styles.gaugeContainer}>

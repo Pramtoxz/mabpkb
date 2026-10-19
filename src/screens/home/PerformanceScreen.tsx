@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  RefreshControl,
 } from 'react-native';
 import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -15,6 +16,7 @@ import 'dayjs/locale/id';
 import {Colors, Spacing, Radius} from '../../constants';
 import {useTabNav} from '../../contexts/TabNavContext';
 import DateFilterModal, {DateRange} from '../../components/DateFilterModal';
+import {getPerformance, type PerformanceResponse} from '../../api/endpoints';
 import perfData from '../../mock/performance.json';
 
 dayjs.locale('id');
@@ -23,6 +25,9 @@ export default function PerformanceScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const {setIsTabBarHidden} = useTabNav();
+
+  const [perfResult, setPerfResult] = useState<PerformanceResponse>(perfData);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -34,16 +39,35 @@ export default function PerformanceScreen() {
     endDate: undefined,
   });
 
+  const loadData = useCallback(async (range?: DateRange) => {
+    try {
+      const res = await getPerformance({
+        startDate: range?.startDate,
+        endDate: range?.endDate,
+      });
+      setPerfResult(res);
+    } catch {
+      setPerfResult(perfData);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       setIsTabBarHidden(true);
+      loadData(appliedRange);
       return () => {
         setIsTabBarHidden(false);
       };
-    }, [setIsTabBarHidden]),
+    }, [setIsTabBarHidden, loadData, appliedRange]),
   );
 
-  const {summary, weekly, monthly} = perfData;
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData(appliedRange);
+    setRefreshing(false);
+  }, [appliedRange, loadData]);
+
+  const {summary, weekly, monthly} = perfResult;
 
   const onDateRangeChange = (params: any) => {
     setDateRange({
@@ -55,18 +79,18 @@ export default function PerformanceScreen() {
   const handleApplyFilter = () => {
     setAppliedRange(dateRange);
     setShowDateFilter(false);
+    loadData(dateRange);
   };
 
   const handleClearFilter = () => {
-    setDateRange({
+    const emptyRange = {
       startDate: undefined,
       endDate: undefined,
-    });
-    setAppliedRange({
-      startDate: undefined,
-      endDate: undefined,
-    });
+    };
+    setDateRange(emptyRange);
+    setAppliedRange(emptyRange);
     setShowDateFilter(false);
+    loadData(emptyRange);
   };
 
   const formattedPeriod = useMemo(() => {
@@ -82,17 +106,8 @@ export default function PerformanceScreen() {
   }, [appliedRange]);
 
   const displayedSummary = useMemo(() => {
-    if (!appliedRange.startDate) {
-      return summary;
-    }
-    return {
-      totalThisMonth: 486,
-      targetThisMonth: 550,
-      achievementPercentage: 88,
-      avgScanSeconds: summary.avgScanSeconds,
-      accuracyRate: summary.accuracyRate,
-    };
-  }, [appliedRange.startDate, summary]);
+    return summary;
+  }, [summary]);
 
   return (
     <View style={styles.screen}>
@@ -152,7 +167,16 @@ export default function PerformanceScreen() {
           styles.scrollContent,
           {paddingBottom: Spacing.huge + insets.bottom},
         ]}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[Colors.primary]}
+            tintColor={Colors.primary}
+          />
+        }>
+
         {formattedPeriod ? (
           <View style={styles.filterBanner}>
             <View style={styles.filterBannerLeft}>

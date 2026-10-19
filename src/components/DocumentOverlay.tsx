@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {View, Text, StyleSheet, useWindowDimensions} from 'react-native';
 import Animated, {
   useSharedValue,
@@ -10,7 +10,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import {
   Colors,
-  Typography,
   DOCUMENT_ASPECT_RATIO,
   DOCUMENT_VIEWPORT_WIDTH_PERCENT,
   BARCODE_ASPECT_RATIO,
@@ -24,10 +23,10 @@ interface DocumentOverlayProps {
   label?: string;
 }
 
-const CORNER_LENGTH = 32;
-const CORNER_THICKNESS = 3;
-const CORNER_COLOR = Colors.accent;
-const CORNER_RADIUS = 4;
+const CORNER_LENGTH = 36;
+const CORNER_THICKNESS = 3.5;
+const CORNER_COLOR = Colors.emeraldMint;
+const CORNER_RADIUS = 6;
 
 function CornerMarkers() {
   return (
@@ -52,20 +51,32 @@ function CornerMarkers() {
   );
 }
 
-export default function DocumentOverlay({variant = 'document', label}: DocumentOverlayProps) {
+export default function DocumentOverlay({
+  variant = 'document',
+  label,
+}: DocumentOverlayProps) {
   const {width: screenWidth} = useWindowDimensions();
+  const [containerWidth, setContainerWidth] = useState(screenWidth);
 
   const pulseOpacity = useSharedValue(1);
-  React.useEffect(() => {
+  const laserProgress = useSharedValue(0);
+
+  useEffect(() => {
     pulseOpacity.value = withRepeat(
       withSequence(
-        withTiming(0.6, {duration: 1200, easing: Easing.inOut(Easing.ease)}),
+        withTiming(0.65, {duration: 1200, easing: Easing.inOut(Easing.ease)}),
         withTiming(1, {duration: 1200, easing: Easing.inOut(Easing.ease)}),
       ),
       -1,
       false,
     );
-  }, [pulseOpacity]);
+
+    laserProgress.value = withRepeat(
+      withTiming(1, {duration: 2600, easing: Easing.inOut(Easing.quad)}),
+      -1,
+      true,
+    );
+  }, [pulseOpacity, laserProgress]);
 
   const pulseStyle = useAnimatedStyle(() => ({
     opacity: pulseOpacity.value,
@@ -77,14 +88,29 @@ export default function DocumentOverlay({variant = 'document', label}: DocumentO
     : DOCUMENT_VIEWPORT_WIDTH_PERCENT;
   const ratio = isBarcode ? BARCODE_ASPECT_RATIO : DOCUMENT_ASPECT_RATIO;
 
-  const cutoutWidth = screenWidth * widthPercent;
+  const baseWidth = containerWidth > 0 ? containerWidth : screenWidth;
+  const cutoutWidth = baseWidth * widthPercent;
   const cutoutHeight = cutoutWidth * ratio;
 
-  const defaultLabel = isBarcode ? 'Posisikan barcode di area ini' : 'Posisikan dokumen BPKB di area ini';
+  const laserStyle = useAnimatedStyle(() => ({
+    transform: [{translateY: laserProgress.value * (cutoutHeight - 6)}],
+  }));
+
+  const defaultLabel = isBarcode
+    ? 'Posisikan barcode BPKB di dalam area ini'
+    : 'Posisikan berkas fisik BPKB di dalam bingkai';
   const displayLabel = label ?? defaultLabel;
 
   return (
-    <View style={styles.overlay} pointerEvents="none">
+    <View
+      style={styles.overlay}
+      pointerEvents="none"
+      onLayout={e => {
+        const w = e.nativeEvent.layout.width;
+        if (w > 0) {
+          setContainerWidth(w);
+        }
+      }}>
       <View style={styles.dimTop} />
 
       <View style={styles.middleRow}>
@@ -93,12 +119,17 @@ export default function DocumentOverlay({variant = 'document', label}: DocumentO
           <Animated.View style={[styles.cornerFrame, pulseStyle]}>
             <CornerMarkers />
           </Animated.View>
+          <Animated.View
+            style={[styles.laserLine, {width: cutoutWidth - 12}, laserStyle]}
+          />
         </View>
         <View style={styles.dimSide} />
       </View>
 
       <View style={styles.dimBottom}>
-        <Text style={styles.label}>{displayLabel}</Text>
+        <View style={styles.labelPill}>
+          <Text style={styles.label}>{displayLabel}</Text>
+        </View>
       </View>
     </View>
   );
@@ -122,22 +153,44 @@ const styles = StyleSheet.create({
   },
   cutout: {
     backgroundColor: 'transparent',
+    overflow: 'hidden',
   },
   cornerFrame: {
     ...(StyleSheet.absoluteFill as object),
+  },
+  laserLine: {
+    position: 'absolute',
+    left: 6,
+    top: 3,
+    height: 2,
+    backgroundColor: Colors.emeraldMint,
+    borderRadius: 1,
+    shadowColor: Colors.emeraldMint,
+    shadowOffset: {width: 0, height: 0},
+    shadowOpacity: 0.9,
+    shadowRadius: 8,
+    elevation: 4,
   },
   dimBottom: {
     flex: 1,
     backgroundColor: Colors.dim,
     alignItems: 'center',
-    paddingTop: 20,
+    paddingTop: 16,
+  },
+  labelPill: {
+    backgroundColor: Colors.dimDark,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(67, 214, 173, 0.3)',
   },
   label: {
-    ...Typography.label,
-    fontSize: 14,
-    color: Colors.whiteTranslucent85,
+    fontFamily: 'Poppins-Medium',
+    fontSize: 12.5,
+    color: Colors.white,
     textAlign: 'center',
-    paddingHorizontal: 24,
+    letterSpacing: 0.3,
   },
 });
 

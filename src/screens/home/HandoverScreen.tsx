@@ -86,7 +86,7 @@ export default function HandoverScreen() {
         <View style={styles.bannerCard}>
           <Text style={styles.bannerHeading}>Bukti Serah Terima Bertanda Tangan</Text>
           <Text style={styles.bannerBody}>
-            Ketika utusan cabang dealer menjemput tumpukan fisik BPKB di meja
+            Ketika dealer menjemput tumpukan fisik BPKB di meja
             scanner, lakukan pemotretan lembar surat tanda terima yang telah
             ditandatangani sebagai arsip digital resmi.
           </Text>

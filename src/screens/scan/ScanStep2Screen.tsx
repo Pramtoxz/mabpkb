@@ -6,13 +6,16 @@ import PhotoCaptureStep from '../../components/PhotoCaptureStep';
 
 type Props = NativeStackScreenProps<ScanStackParamList, 'ScanStep2'>;
 
-export default function ScanStep2Screen({navigation}: Props) {
+export default function ScanStep2Screen({navigation, route}: Props) {
   const {setPhoto2} = useScan();
 
-  const handleNext = useCallback(
-    () => navigation.navigate('ScanStep3'),
-    [navigation],
-  );
+  const handleNext = useCallback(() => {
+    if (route.params?.returnToReview) {
+      navigation.navigate('ScanReview');
+      return;
+    }
+    navigation.navigate('ScanStep3');
+  }, [navigation, route.params]);
 
   return (
     <PhotoCaptureStep

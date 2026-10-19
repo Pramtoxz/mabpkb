@@ -10,7 +10,6 @@ import LottieView from 'lottie-react-native';
 import {Colors, Spacing, Radius} from '../constants';
 import {useSound} from '../hooks/useSound';
 import {useHaptic} from '../hooks/useHaptic';
-
 export interface BluetoothPedalModalProps {
   visible: boolean;
   type: 'connected' | 'pedal_pressed';
@@ -31,7 +30,7 @@ export default function BluetoothPedalModal({
       haptic('success');
       const timer = setTimeout(() => {
         onClose();
-      }, 2600);
+      }, 1200);
       return () => clearTimeout(timer);
     }
   }, [visible, onClose, playSound, haptic]);
@@ -52,20 +51,19 @@ export default function BluetoothPedalModal({
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop}>
           <View style={styles.cardContainer}>
-            <View style={styles.lottieBox}>
+            <View style={styles.badgePill}>
+              <View style={styles.badgeDot} />
+              <Text style={styles.badgeText}>
+                {isConnectedType ? 'Hardware Tersambung' : 'Pedal Kaki Terdeteksi'}
+              </Text>
+            </View>
+                <View style={styles.lottieBox}>
               <LottieView
                 source={require('../assets/lottie/bluetooth.json')}
                 autoPlay
                 loop
                 style={styles.lottie}
               />
-            </View>
-
-            <View style={styles.badgePill}>
-              <View style={styles.badgeDot} />
-              <Text style={styles.badgeText}>
-                {isConnectedType ? 'Hardware Tersambung' : 'Pedal Kaki Terdeteksi'}
-              </Text>
             </View>
           </View>
         </View>
@@ -77,7 +75,7 @@ export default function BluetoothPedalModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.92)',
+    backgroundColor: Colors.white, 
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.xl,

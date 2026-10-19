@@ -1,9 +1,19 @@
-import React, { useState } from 'react';
-import { View, Image, TouchableOpacity, StyleSheet, Text, Modal } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography } from '../constants';
-import { useScan } from '../contexts/ScanContext';
-import { useAlert } from '../contexts/AlertContext';
+import React, {useState} from 'react';
+import {
+  View,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  Text,
+  Modal,
+  ActivityIndicator,
+} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import {ResumableZoom} from 'react-native-zoom-toolkit';
+import Svg, {Path} from 'react-native-svg';
+import {Colors, Radius, Spacing} from '../constants';
+import {useScan} from '../contexts/ScanContext';
 
 interface ThumbnailStripProps {
   currentStep: number;
@@ -17,12 +27,19 @@ const STEP_TITLES = [
   'Dokumen Persyaratan',
 ];
 
-const SLOT_LABELS = ['Hal 1', 'Hal 2', 'Hal 3', 'Hal 4'];
+const SLOT_LABELS = ['HAL 1', 'HAL 2', 'HAL 3', 'HAL 4'];
 
-export default function ThumbnailStrip({ currentStep, onRetake }: ThumbnailStripProps) {
+export default function ThumbnailStrip({
+  currentStep,
+  onRetake,
+}: ThumbnailStripProps) {
   const navigation = useNavigation<any>();
-  const { state, retakeFromStep } = useScan();
+  const {state, retakeFromStep} = useScan();
   const [previewStep, setPreviewStep] = useState<number | null>(null);
+  const [containerSize, setContainerSize] = useState<{width: number; height: number}>({
+    width: 0,
+    height: 0,
+  });
   const photos = [state.photo1, state.photo2, state.photo3, state.photo4];
 
   const handleTap = (step: number) => {
@@ -43,7 +60,6 @@ export default function ThumbnailStrip({ currentStep, onRetake }: ThumbnailStrip
   };
 
   const previewPhoto = previewStep != null ? photos[previewStep - 1] : null;
-  const isCropped = previewPhoto?.uri ? previewPhoto.uri.includes('_scan.jpg') : false;
 
   return (
     <>
@@ -67,17 +83,33 @@ export default function ThumbnailStrip({ currentStep, onRetake }: ThumbnailStrip
               activeOpacity={isFilled ? 0.7 : 1}
               disabled={!isFilled}>
               {isFilled ? (
-                <Image source={{ uri: photo!.uri }} style={styles.thumb} />
+                <Image source={{uri: photo!.uri}} style={styles.thumb} />
               ) : (
-                <Text style={[styles.slotLabel, isActive && styles.slotLabelActive]}>
+                <Text
+                  style={[
+                    styles.slotLabel,
+                    isActive && styles.slotLabelActive,
+                  ]}>
                   {SLOT_LABELS[i]}
                 </Text>
               )}
-              {isFilled && (
-                <View style={styles.checkBadge}>
-                  <Text style={styles.checkBadgeText}>✓</Text>
+              {isFilled && photo?.isProcessing ? (
+                <View style={styles.cookingBadge}>
+                  <ActivityIndicator size={10} color={Colors.emeraldMint} />
                 </View>
-              )}
+              ) : isFilled ? (
+                <View style={styles.checkBadge}>
+                  <Svg width={10} height={10} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M20 6L9 17l-5-5"
+                      stroke={Colors.white}
+                      strokeWidth={3}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                </View>
+              ) : null}
             </TouchableOpacity>
           );
         })}
@@ -88,48 +120,89 @@ export default function ThumbnailStrip({ currentStep, onRetake }: ThumbnailStrip
         transparent
         animationType="fade"
         onRequestClose={() => setPreviewStep(null)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalTitleContainer}>
-                <Text style={styles.modalTitle}>
-                  Halaman {previewStep}
-                </Text>
-                <Text style={styles.modalSubtitle}>
-                  {previewStep != null ? STEP_TITLES[previewStep - 1] : ''}
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setPreviewStep(null)}
-                style={styles.closeBtn}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Text style={styles.closeBtnText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            {previewPhoto?.uri ? (
-              <View style={styles.previewImageContainer}>
-                <Image
-                  source={{ uri: previewPhoto.uri }}
-                  style={styles.previewImage}
-                  resizeMode="contain"
-                />
-              </View>
-            ) : null}
+        <GestureHandlerRootView style={styles.flexRoot}>
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalTitleContainer}>
+                  <View style={styles.modalTitleRow}>
+                    <Text style={styles.modalTitle}>Halaman {previewStep}</Text>
+                    <View style={styles.zoomHintPill}>
+                      <Text style={styles.zoomHintText}>Pinch / Zoom 120 FPS</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.modalSubtitle}>
+                    {previewStep != null ? STEP_TITLES[previewStep - 1] : ''}
+                  </Text>
+                </View>
 
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => setPreviewStep(null)}>
-                <Text style={styles.cancelBtnText}>Tutup</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.retakeBtn}
-                onPress={() => previewStep && handleRetakeConfirm(previewStep)}>
-                <Text style={styles.retakeBtnText}>Foto Ulang</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setPreviewStep(null)}
+                  style={styles.closeBtn}
+                  hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
+                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M18 6L6 18M6 6l12 12"
+                      stroke={Colors.textSecondary}
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                </TouchableOpacity>
+              </View>
+
+              {previewPhoto?.uri ? (
+                <View
+                  style={styles.previewImageContainer}
+                  onLayout={e => {
+                    const {width, height} = e.nativeEvent.layout;
+                    if (width > 0 && height > 0) {
+                      setContainerSize({
+                        width: Math.round(width),
+                        height: Math.round(height),
+                      });
+                    }
+                  }}>
+                  {containerSize.width > 0 && containerSize.height > 0 ? (
+                    <ResumableZoom maxScale={5} style={styles.zoomContainer}>
+                      <Image
+                        source={{uri: previewPhoto.uri}}
+                        style={{
+                          width: containerSize.width,
+                          height: containerSize.height,
+                        }}
+                        resizeMode="contain"
+                      />
+                    </ResumableZoom>
+                  ) : (
+                    <Image
+                      source={{uri: previewPhoto.uri}}
+                      style={styles.previewImage}
+                      resizeMode="contain"
+                    />
+                  )}
+                </View>
+              ) : null}
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setPreviewStep(null)}
+                  activeOpacity={0.75}>
+                  <Text style={styles.cancelBtnText}>Tutup</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.retakeBtn}
+                  onPress={() => previewStep && handleRetakeConfirm(previewStep)}
+                  activeOpacity={0.85}>
+                  <Text style={styles.retakeBtnText}>Foto Ulang</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
+        </GestureHandlerRootView>
       </Modal>
     </>
   );
@@ -138,6 +211,9 @@ export default function ThumbnailStrip({ currentStep, onRetake }: ThumbnailStrip
 const THUMB_SIZE = 64;
 
 const styles = StyleSheet.create({
+  flexRoot: {
+    flex: 1,
+  },
   strip: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -148,37 +224,43 @@ const styles = StyleSheet.create({
   slot: {
     width: THUMB_SIZE,
     height: THUMB_SIZE,
-    borderRadius: 10,
-    borderWidth: 2,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
     borderColor: Colors.borderLight,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.surfaceAlt,
+    backgroundColor: Colors.surface,
     overflow: 'hidden',
   },
   slotFilled: {
     borderStyle: 'solid',
-    borderColor: Colors.success,
+    borderColor: Colors.emeraldMint,
     borderWidth: 2,
   },
   slotActive: {
-    borderColor: Colors.accent,
-    borderWidth: 2.5,
+    borderColor: Colors.primary,
+    borderWidth: 2,
     borderStyle: 'solid',
+    shadowColor: Colors.primary,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   slotPast: {
-    borderColor: Colors.error,
+    borderColor: Colors.borderLight,
     borderStyle: 'solid',
   },
   slotLabel: {
-    ...Typography.labelSmall,
-    color: Colors.textSecondary,
+    fontFamily: 'Poppins-Bold',
+    fontSize: 10.5,
+    color: Colors.textTertiary,
     textAlign: 'center',
+    letterSpacing: 0.5,
   },
   slotLabelActive: {
-    color: Colors.accent,
-    fontFamily: 'Inter-SemiBold',
+    color: Colors.primary,
   },
   thumb: {
     width: '100%',
@@ -187,110 +269,107 @@ const styles = StyleSheet.create({
   },
   checkBadge: {
     position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: Colors.success,
+    top: 4,
+    right: 4,
+    width: 18,
+    height: 18,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.emeraldMint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkBadgeText: {
-    fontSize: 11,
-    color: Colors.surface,
-    fontFamily: 'Inter-SemiBold',
+  cookingBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 18,
+    height: 18,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.neutral,
+    borderWidth: 1.5,
+    borderColor: Colors.emeraldMint,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalBackdrop: {
     flex: 1,
     backgroundColor: Colors.dimDark,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: Spacing.lg,
   },
   modalCard: {
     width: '100%',
-    maxWidth: 480,
-    maxHeight: '90%',
+    maxWidth: 520,
+    maxHeight: '92%',
     backgroundColor: Colors.surface,
-    borderRadius: 20,
-    padding: 18,
+    borderRadius: Radius.xxl,
+    padding: Spacing.lg,
     shadowColor: Colors.shadowDark,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOffset: {width: 0, height: 10},
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 10,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: Spacing.md,
   },
   modalTitleContainer: {
     flex: 1,
   },
+  modalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   modalTitle: {
-    ...Typography.h3,
-    fontSize: 18,
-    color: Colors.textPrimary,
+    fontFamily: 'Poppins-Bold',
+    fontSize: 17,
+    color: Colors.textHeadline,
+  },
+  zoomHintPill: {
+    backgroundColor: Colors.secondary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  zoomHintText: {
+    fontFamily: 'Poppins-Medium',
+    fontSize: 9.5,
+    color: Colors.primary,
   },
   modalSubtitle: {
-    ...Typography.bodySmall,
+    fontFamily: 'Poppins-Regular',
+    fontSize: 12,
     color: Colors.textSecondary,
     marginTop: 2,
   },
   closeBtn: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: Radius.full,
     backgroundColor: Colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  closeBtnText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    fontWeight: 'bold',
-  },
-  statusBadge: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginBottom: 12,
-  },
-  statusBadgeSuccess: {
-    backgroundColor: Colors.successLight,
-    borderWidth: 1,
-    borderColor: Colors.success,
-  },
-  statusBadgeWarning: {
-    backgroundColor: Colors.warningLight,
-    borderWidth: 1,
-    borderColor: Colors.warning,
-  },
-  statusBadgeText: {
-    ...Typography.labelSmall,
-    fontSize: 12,
-  },
-  statusTextSuccess: {
-    color: Colors.success,
-    fontFamily: 'Inter-SemiBold',
-  },
-  statusTextWarning: {
-    color: Colors.warning,
-    fontFamily: 'Inter-SemiBold',
+    borderColor: Colors.borderLight,
   },
   previewImageContainer: {
     width: '100%',
-    height: 340,
-    borderRadius: 12,
+    height: 380,
+    borderRadius: Radius.xl,
     overflow: 'hidden',
     backgroundColor: Colors.darkCardBg,
-    marginBottom: 16,
+    marginBottom: Spacing.md,
+  },
+  zoomContainer: {
+    width: '100%',
+    height: '100%',
   },
   previewImage: {
     width: '100%',
@@ -302,8 +381,8 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    height: 46,
-    borderRadius: 12,
+    height: 48,
+    borderRadius: Radius.full,
     borderWidth: 1,
     borderColor: Colors.border,
     alignItems: 'center',
@@ -311,20 +390,27 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceAlt,
   },
   cancelBtnText: {
-    ...Typography.label,
-    color: Colors.textPrimary,
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 14,
+    color: Colors.textSecondary,
   },
   retakeBtn: {
     flex: 1,
-    height: 46,
-    borderRadius: 12,
-    backgroundColor: Colors.error,
+    height: 48,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 4,
   },
   retakeBtnText: {
-    ...Typography.label,
-    color: Colors.surface,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Poppins-Bold',
+    fontSize: 14,
+    color: Colors.white,
+    letterSpacing: 0.3,
   },
 });

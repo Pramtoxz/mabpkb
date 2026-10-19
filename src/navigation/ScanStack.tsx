@@ -9,6 +9,7 @@ import ScanStep2Screen from '../screens/scan/ScanStep2Screen';
 import ScanStep3Screen from '../screens/scan/ScanStep3Screen';
 import ScanStep4Screen from '../screens/scan/ScanStep4Screen';
 import ScanStep5Screen from '../screens/scan/ScanStep5Screen';
+import ScanReviewScreen from '../screens/scan/ScanReviewScreen';
 
 const Stack = createNativeStackNavigator<ScanStackParamList>();
 
@@ -39,6 +40,7 @@ export default function ScanStack() {
         <Stack.Screen name="ScanStep3" component={ScanStep3Screen} />
         <Stack.Screen name="ScanStep4" component={ScanStep4Screen} />
         <Stack.Screen name="ScanStep5" component={ScanStep5Screen} />
+        <Stack.Screen name="ScanReview" component={ScanReviewScreen} />
       </Stack.Navigator>
     </PedalProvider>
   );

@@ -7,7 +7,14 @@ import {
   RotateFlags,
 } from 'react-native-fast-opencv';
 import RNFS from 'react-native-fs';
+import ImageResizer from '@bam.tech/react-native-image-resizer';
 import {calculateDocumentRoi} from './roiCalculator';
+import {
+  DOCUMENT_ASPECT_RATIO,
+  DOCUMENT_VIEWPORT_WIDTH_PERCENT,
+  BARCODE_ASPECT_RATIO,
+  BARCODE_VIEWPORT_WIDTH_PERCENT,
+} from '../constants';
 
 export interface ScanResult {
   uri: string;
@@ -18,7 +25,12 @@ function uriToFilePath(uri: string): string {
   return uri.replace('file://', '');
 }
 
-export async function processScanImage(uri: string): Promise<ScanResult> {
+export async function processScanImage(
+  uri: string,
+  viewWidth?: number,
+  viewHeight?: number,
+  isBarcode: boolean = false,
+): Promise<ScanResult> {
   const releasables: Array<{release: () => void}> = [];
   const track = <T extends {release: () => void}>(obj: T): T => {
     releasables.push(obj);
@@ -33,8 +45,24 @@ export async function processScanImage(uri: string): Promise<ScanResult> {
   };
 
   try {
-    const filePath = uriToFilePath(uri);
-    const base64 = await RNFS.readFile(filePath, 'base64');
+    const rawPath = uriToFilePath(uri);
+    let base64 = '';
+    try {
+      base64 = await RNFS.readFile(rawPath, 'base64');
+    } catch {
+      const resized = await ImageResizer.createResizedImage(
+        `file://${rawPath}`,
+        1920,
+        1920,
+        'JPEG',
+        90,
+        0,
+      );
+      base64 = await RNFS.readFile(resized.path, 'base64');
+      try {
+        await RNFS.unlink(resized.path);
+      } catch {}
+    }
 
     const src = track(Mat.createFromBase64(base64));
 
@@ -50,7 +78,19 @@ export async function processScanImage(uri: string): Promise<ScanResult> {
       workingMat = rotated;
     }
 
-    const roi = calculateDocumentRoi(workingMat.cols, workingMat.rows);
+    const widthPercent = isBarcode
+      ? BARCODE_VIEWPORT_WIDTH_PERCENT
+      : DOCUMENT_VIEWPORT_WIDTH_PERCENT;
+    const ratio = isBarcode ? BARCODE_ASPECT_RATIO : DOCUMENT_ASPECT_RATIO;
+
+    const roi = calculateDocumentRoi(
+      workingMat.cols,
+      workingMat.rows,
+      widthPercent,
+      ratio,
+      viewWidth,
+      viewHeight,
+    );
     const targetRect = track(Rect.create(roi.x, roi.y, roi.width, roi.height));
 
     const cropped = track(
