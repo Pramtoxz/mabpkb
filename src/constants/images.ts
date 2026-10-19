@@ -4,7 +4,7 @@ export const Images = {
   logoMD: require('../assets/images/logomd.webp'),
   maLogo: require('../assets/images/malogo.webp'),
   scannerMascot: require('../assets/images/3.webp'),
-  appLauncher: require('../assets/images/app_launcher.webp'),
+  appLauncher: require('../assets/images/aciax.webp'),
   scanner3DDevice: require('../assets/images/scanner.webp'),
   scannerOn: require('../assets/images/on.webp'),
   scannerOff: require('../assets/images/off.webp'),
