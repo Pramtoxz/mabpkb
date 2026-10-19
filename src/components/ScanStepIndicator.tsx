@@ -1,8 +1,7 @@
 import React from 'react';
 import {View, Text, StyleSheet} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {CheckIcon} from './TabIcons';
-import {Colors, Typography} from '../constants';
+import {Colors, Radius, Spacing} from '../constants';
 
 const STEP_LABELS = [
   'Identitas Pemilik',
@@ -17,15 +16,26 @@ interface ScanStepIndicatorProps {
   totalSteps: number;
 }
 
-export default function ScanStepIndicator({currentStep, totalSteps}: ScanStepIndicatorProps) {
+export default function ScanStepIndicator({
+  currentStep,
+  totalSteps,
+}: ScanStepIndicatorProps) {
   const insets = useSafeAreaInsets();
   const label = STEP_LABELS[currentStep - 1] ?? '';
 
   return (
-    <View style={[styles.container, {paddingTop: insets.top + 12}]}>
-      <Text style={styles.stepLabel} numberOfLines={1}>
-        STEP {currentStep} · {label}
-      </Text>
+    <View style={[styles.container, {paddingTop: Math.max(insets.top, 10)}]}>
+      <View style={styles.headerRow}>
+        <View style={styles.stepBadge}>
+          <Text style={styles.stepBadgeText}>
+            LANGKAH {currentStep} / {totalSteps}
+          </Text>
+        </View>
+
+        <Text style={styles.stepTitle} numberOfLines={1}>
+          {label}
+        </Text>
+      </View>
 
       <View style={styles.bar}>
         {Array.from({length: totalSteps}, (_, i) => {
@@ -47,81 +57,68 @@ export default function ScanStepIndicator({currentStep, totalSteps}: ScanStepInd
           );
         })}
       </View>
-
-      <View style={styles.checkRow}>
-        {Array.from({length: totalSteps}, (_, i) => {
-          const step = i + 1;
-          const isDone = step < currentStep;
-          const isActive = step === currentStep;
-
-          return (
-            <View key={step} style={styles.checkSlot}>
-              {isDone ? (
-                <CheckIcon size={14} color={Colors.accent} />
-              ) : (
-                <View
-                  style={[
-                    styles.checkDot,
-                    isActive && styles.checkDotActive,
-                  ]}
-                />
-              )}
-            </View>
-          );
-        })}
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 8,
-    paddingHorizontal: 20,
+    paddingBottom: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: Colors.background,
   },
-  stepLabel: {
-    ...Typography.label,
-    color: Colors.textSecondary,
-    marginBottom: 10,
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  stepBadge: {
+    backgroundColor: Colors.secondary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  stepBadgeText: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 10,
+    color: Colors.primary,
+    letterSpacing: 0.5,
+  },
+  stepTitle: {
+    fontFamily: 'Poppins-SemiBold',
+    fontSize: 13,
+    color: Colors.textHeadline,
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: Spacing.sm,
   },
   bar: {
     flexDirection: 'row',
-    height: 4,
-    borderRadius: 2,
+    height: 5,
+    borderRadius: Radius.full,
     overflow: 'hidden',
+    backgroundColor: Colors.surfaceAlt,
   },
   segment: {
     flex: 1,
     backgroundColor: Colors.borderLight,
-    borderRadius: 2,
+    borderRadius: Radius.full,
   },
   segmentGap: {
     width: 4,
   },
   segmentDone: {
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.primary,
   },
   segmentActive: {
-    backgroundColor: Colors.accent,
-  },
-  checkRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  checkSlot: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 24,
-    height: 24,
-  },
-  checkDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.borderLight,
-  },
-  checkDotActive: {
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.emeraldMint,
+    shadowColor: Colors.emeraldMint,
+    shadowOffset: {width: 0, height: 0},
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 2,
   },
 });

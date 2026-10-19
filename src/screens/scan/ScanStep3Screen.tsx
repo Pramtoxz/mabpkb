@@ -19,6 +19,7 @@ import ScanStepIndicator from '../../components/ScanStepIndicator';
 import PedalCamera from '../../components/PedalCamera';
 import ScanFeedback from '../../components/ScanFeedback';
 import ThumbnailStrip from '../../components/ThumbnailStrip';
+import ScanTopDealerAlert from '../../components/ScanTopDealerAlert';
 
 type Props = NativeStackScreenProps<ScanStackParamList, 'ScanStep3'>;
 type Phase = 'camera' | 'processing' | 'result' | 'error';
@@ -45,7 +46,7 @@ async function verifyCandidates(
 
 export default function ScanStep3Screen({navigation}: Props) {
   const insets = useSafeAreaInsets();
-  const {setPhoto3, setNomesin, setDealer} = useScan();
+  const {setPhoto3, setNomesin, setDealer, state} = useScan();
   const {play: playSound} = useSound();
   const {trigger: haptic} = useHaptic();
   const [phase, setPhase] = useState<Phase>('camera');
@@ -187,6 +188,13 @@ export default function ScanStep3Screen({navigation}: Props) {
   return (
     <View style={[styles.container, {paddingBottom: Spacing.xxl + insets.bottom}]}>
       <ScanStepIndicator currentStep={3} totalSteps={5} />
+
+      {phase === 'result' && state.dealer ? (
+        <ScanTopDealerAlert
+          dealerName={state.dealer.nm_dealer}
+          paymentType={state.dealer.payment_type}
+        />
+      ) : null}
 
       <View style={styles.cameraArea}>
         {phase === 'camera' && (

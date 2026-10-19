@@ -9,6 +9,7 @@ export interface ScanImage {
 export interface DealerData {
   fk_dealer: string;
   nm_dealer: string;
+  payment_type?: 'CASH' | 'CREDIT';
 }
 
 interface ScanState {

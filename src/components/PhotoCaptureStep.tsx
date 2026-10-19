@@ -2,7 +2,7 @@ import React, {useCallback, useRef, useState} from 'react';
 import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Colors, Typography, Spacing, Radius} from '../constants';
-import type {ScanImage} from '../contexts/ScanContext';
+import {useScan, type ScanImage} from '../contexts/ScanContext';
 import {useHardwareKey} from '../hooks/useHardwareKey';
 import {useHaptic} from '../hooks/useHaptic';
 import {useSound} from '../hooks/useSound';
@@ -10,6 +10,7 @@ import {CheckIcon} from './TabIcons';
 import PedalCamera from './PedalCamera';
 import ScanStepIndicator from './ScanStepIndicator';
 import ThumbnailStrip from './ThumbnailStrip';
+import ScanTopDealerAlert from './ScanTopDealerAlert';
 
 const NEXT_STEP_DELAY_MS = 1000;
 
@@ -33,6 +34,7 @@ export default function PhotoCaptureStep({
   onNext,
 }: PhotoCaptureStepProps) {
   const insets = useSafeAreaInsets();
+  const {state} = useScan();
   const [phase, setPhase] = useState<Phase>('camera');
   const [hintExpanded, setHintExpanded] = useState(true);
   const nextTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -62,6 +64,13 @@ export default function PhotoCaptureStep({
   return (
     <View style={[styles.container, {paddingBottom: Spacing.xxl + insets.bottom}]}>
       <ScanStepIndicator currentStep={step} totalSteps={totalSteps} />
+
+      {state.dealer ? (
+        <ScanTopDealerAlert
+          dealerName={state.dealer.nm_dealer}
+          paymentType={state.dealer.payment_type}
+        />
+      ) : null}
 
       <View style={styles.cameraArea}>
         <PedalCamera

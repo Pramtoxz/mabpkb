@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   AppState,
   AppStateStatus,
+  useWindowDimensions,
 } from 'react-native';
 import {
   Camera,
@@ -33,6 +34,7 @@ import ScanStepIndicator from '../../components/ScanStepIndicator';
 import ThumbnailStrip from '../../components/ThumbnailStrip';
 import DocumentOverlay from '../../components/DocumentOverlay';
 import {CheckIcon, XIcon} from '../../components/TabIcons';
+import ConfettiCannon from 'react-native-confetti-cannon';
 
 type Props = NativeStackScreenProps<ScanStackParamList, 'ScanStep5'>;
 type Phase = 'scanning' | 'confirm' | 'submitting' | 'submitError';
@@ -61,6 +63,8 @@ export default function ScanStep5Screen({navigation}: Props) {
   const [resultText, setResultText] = useState('');
   const [manualInput, setManualInput] = useState('');
   const [errorText, setErrorText] = useState('');
+  const [showConfetti, setShowConfetti] = useState(false);
+  const {width: screenWidth} = useWindowDimensions();
   const isSubmittingRef = useRef(false);
   const hasScannedRef = useRef(false);
   const isFocused = useIsFocused();
@@ -109,6 +113,7 @@ export default function ScanStep5Screen({navigation}: Props) {
 
         haptic('submit');
         playSound('submit');
+        setShowConfetti(true);
         showAlert({
           title: 'Berhasil',
           message: `BPKB sedang diproses.\nTrack ID: ${result.track_id}`,
@@ -304,6 +309,16 @@ export default function ScanStep5Screen({navigation}: Props) {
           </Text>
         )}
       </TouchableOpacity>
+
+      {showConfetti && (
+        <ConfettiCannon
+          count={100}
+          origin={{x: screenWidth / 2, y: -20}}
+          fadeOut
+          fallSpeed={2800}
+          explosionSpeed={350}
+        />
+      )}
     </View>
   );
 }
