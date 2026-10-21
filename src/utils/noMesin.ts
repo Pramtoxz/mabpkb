@@ -8,7 +8,7 @@ const TYPICAL_MAX_LENGTH = 13;
 const PREFIX = 'JM';
 const PREFIX_KEEP_LENGTH = 5;
 
-const PREFIXED_PATTERN = /JM[A-Z0-9]{6,15}/g;
+const PREFIXED_PATTERN = /(?:JM|JF|KC|KD|JB|JC|MH|[A-Z]{2})[A-Z0-9]{6,15}/g;
 const ENGINE_SHAPE = /^[A-Z][A-Z0-9]{2,6}\d{5,9}$/;
 const LONG_DIGIT_RUN = /\d{5,}/;
 
@@ -24,8 +24,32 @@ const OCR_CONFUSIONS: Record<string, string> = {
   G: '6',
 };
 
+export function fixFourthCharToDigit(token: string): string {
+  if (token.length < 4) {
+    return token;
+  }
+  const char4 = token[3];
+  if (/\d/.test(char4)) {
+    return token;
+  }
+  const hasDigitTail = /\d/.test(token.slice(4));
+  const hasMotorPrefix = /^(?:JM|JF|KC|KD|JB|JC|MH)/.test(token);
+  if (!hasDigitTail && !hasMotorPrefix) {
+    return token;
+  }
+  const digit = OCR_CONFUSIONS[char4] ?? '1';
+  return token.slice(0, 3) + digit + token.slice(4);
+}
+
 export function normalizeNoMesin(raw: string): string {
-  return raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (cleaned.length < 4 || cleaned.length > MAX_LENGTH) {
+    return cleaned;
+  }
+  if (raw.includes(' ') && cleaned.length > TYPICAL_MAX_LENGTH) {
+    return cleaned;
+  }
+  return fixFourthCharToDigit(cleaned);
 }
 
 function isPlausible(token: string): boolean {
@@ -49,13 +73,20 @@ function score(token: string): number {
   if (token.length >= TYPICAL_MIN_LENGTH && token.length <= TYPICAL_MAX_LENGTH) {
     value += 2;
   }
+  if (token.length >= 4 && /\d/.test(token[3])) {
+    value += 3;
+  }
+  if (token.length >= 5 && token[4] === 'E') {
+    value += 3;
+  }
   return value;
 }
 
 function repairDigitTail(token: string): string {
-  const head = token.slice(0, PREFIX_KEEP_LENGTH);
+  const fixed = fixFourthCharToDigit(token);
+  const head = fixed.slice(0, PREFIX_KEEP_LENGTH);
   let tail = '';
-  for (const character of token.slice(PREFIX_KEEP_LENGTH)) {
+  for (const character of fixed.slice(PREFIX_KEEP_LENGTH)) {
     tail += OCR_CONFUSIONS[character] ?? character;
   }
   return head + tail;
@@ -74,6 +105,12 @@ export function extractNoMesinCandidates(
     }
     seen.add(token);
     candidates.push(token);
+
+    const fixed = fixFourthCharToDigit(token);
+    if (fixed !== token && isPlausible(fixed) && !seen.has(fixed)) {
+      seen.add(fixed);
+      candidates.push(fixed);
+    }
   };
 
   const considerPrefixed = (normalized: string) => {

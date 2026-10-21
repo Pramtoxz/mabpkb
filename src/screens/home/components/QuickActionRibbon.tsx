@@ -32,7 +32,7 @@ export default function QuickActionRibbon({
           activeOpacity={0.8}
           onPress={onOpenDealer}>
           <View style={styles.iconBox}>
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
               <Path
                 d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
                 stroke={Colors.primary}
@@ -49,7 +49,7 @@ export default function QuickActionRibbon({
               />
             </Svg>
           </View>
-          <Text style={styles.cardLabel}>Cabang{'\n'}Dealer</Text>
+          <Text style={styles.cardLabel}>List{'\n'}Dealer</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -57,7 +57,7 @@ export default function QuickActionRibbon({
           activeOpacity={0.8}
           onPress={onOpenTrack}>
           <View style={styles.iconBox}>
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
               <Path
                 d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
                 stroke={Colors.primary}
@@ -82,7 +82,7 @@ export default function QuickActionRibbon({
           activeOpacity={0.8}
           onPress={onOpenHandover}>
           <View style={styles.iconBox}>
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
               <Path
                 d="M9 11l3 3L22 4"
                 stroke={Colors.primary}
@@ -107,7 +107,7 @@ export default function QuickActionRibbon({
           activeOpacity={0.8}
           onPress={onOpenRevision}>
           <View style={styles.iconBox}>
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
               <Path
                 d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
                 stroke={Colors.primary}
@@ -134,7 +134,7 @@ export default function QuickActionRibbon({
           activeOpacity={0.8}
           onPress={onOpenPerformance}>
           <View style={styles.iconBox}>
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
               <Path
                 d="M18 20V10M12 20V4M6 20v-6"
                 stroke={Colors.primary}
@@ -152,7 +152,7 @@ export default function QuickActionRibbon({
           activeOpacity={0.8}
           onPress={onOpenSop}>
           <View style={styles.iconBox}>
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
               <Path
                 d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"
                 stroke={Colors.primary}
@@ -177,7 +177,7 @@ export default function QuickActionRibbon({
           activeOpacity={0.8}
           onPress={onOpenPedalTest}>
           <View style={styles.iconBox}>
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
               <Path
                 d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
                 stroke={Colors.primary}
@@ -195,7 +195,7 @@ export default function QuickActionRibbon({
           activeOpacity={0.8}
           onPress={onOpenTeam}>
           <View style={styles.iconBox}>
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
               <Path
                 d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
                 stroke={Colors.primary}
@@ -236,7 +236,7 @@ export default function QuickActionRibbon({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: Spacing.xl,
-    marginBottom: Spacing.md,
+    marginBottom: 8,
     gap: 8,
   },
   gridRow: {
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.surface,
     borderRadius: Radius.xl,
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 2,
     alignItems: 'center',
     justifyContent: 'center',
@@ -261,18 +261,18 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderLight,
   },
   iconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: Radius.lg,
+    width: 34,
+    height: 34,
+    borderRadius: Radius.md,
     backgroundColor: Colors.secondary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   cardLabel: {
     fontFamily: 'Poppins-SemiBold',
-    fontSize: 10,
-    lineHeight: 13.5,
+    fontSize: 9.5,
+    lineHeight: 12.5,
     color: Colors.textHeadline,
     textAlign: 'center',
   },

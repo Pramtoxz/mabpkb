@@ -105,9 +105,9 @@ export default function CollapsibleTopAppBar({
       Extrapolation.CLAMP,
     );
     return {
-      backgroundColor: `rgba(247, 244, 239, ${progress})`,
+      backgroundColor: `rgba(${Colors.appBarBgRgb}, ${progress})`,
       borderBottomWidth: progress > 0.8 ? StyleSheet.hairlineWidth : 0,
-      borderBottomColor: `rgba(232, 226, 216, ${progress})`,
+      borderBottomColor: `rgba(${Colors.appBarBorderRgb}, ${progress})`,
     };
   });
 

@@ -1,4 +1,4 @@
-import React, {useCallback, useState, useMemo} from 'react';
+import React, {useCallback, useState, useMemo, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,16 @@ import {
   ScrollView,
   TextInput,
   StatusBar,
+  Image,
+  InteractionManager,
 } from 'react-native';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useIsFocused, useNavigation} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useTourGuideController} from 'rn-tourguide';
 import Svg, {Path} from 'react-native-svg';
-import {Colors, Spacing, Radius} from '../../constants';
+import {Colors, Spacing, Radius, getRandomOtherMascot} from '../../constants';
 import {useTabNav} from '../../contexts/TabNavContext';
+import {hasSeenTour, markTourSeen} from '../../utils/storage';
 import dealersData from '../../mock/dealers.json';
 
 interface DealerBranch {
@@ -25,14 +29,57 @@ const DEALER_LIST: DealerBranch[] = dealersData as DealerBranch[];
 export default function DealerScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
   const {setIsTabBarHidden} = useTabNav();
   const [search, setSearch] = useState('');
+  const mascotSource = useMemo(() => getRandomOtherMascot(), []);
+  const {start, stop, canStart, TourGuideZone} = useTourGuideController('dealer');
+  const stopRef = useRef(stop);
+  stopRef.current = stop;
+  const startRef = useRef(start);
+  startRef.current = start;
+  const hasCheckedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isFocused || !canStart || hasCheckedRef.current) {
+      return;
+    }
+    hasCheckedRef.current = true;
+
+    if (hasSeenTour('dealer')) {
+      return;
+    }
+
+    let isActive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (!isActive) {
+        return;
+      }
+      timer = setTimeout(() => {
+        if (isActive && !hasSeenTour('dealer')) {
+          startRef.current?.();
+          markTourSeen('dealer');
+        }
+      }, 500);
+    });
+
+    return () => {
+      isActive = false;
+      task.cancel();
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [canStart, isFocused]);
 
   useFocusEffect(
     useCallback(() => {
       setIsTabBarHidden(true);
       return () => {
         setIsTabBarHidden(false);
+        stopRef.current?.();
       };
     }, [setIsTabBarHidden]),
   );
@@ -76,28 +123,45 @@ export default function DealerScreen() {
           <Text style={styles.topBarSubtitle}>Panduan Sortir BPKB</Text>
           <Text style={styles.topBarTitle}>List Dealer</Text>
         </View>
-        <View style={styles.topBarRightSlot} />
+        <TouchableOpacity
+          style={styles.topBarRightSlot}
+          onPress={() => canStart && start()}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Buka Panduan List Dealer">
+          <Image
+            source={mascotSource}
+            style={styles.topBarMascot}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.searchWrapper}>
-        <View style={styles.searchBox}>
-          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35"
-              stroke={Colors.textSecondary}
-              strokeWidth={2}
-              strokeLinecap="round"
+      <TourGuideZone
+        zone={1}
+        text="Gunakan pencarian ini untuk menemukan kode cabang atau nama dealer Honda secara instan."
+        borderRadius={16}
+        shape="rectangle">
+        <View style={styles.searchWrapper}>
+          <View style={styles.searchBox}>
+            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35"
+                stroke={Colors.textSecondary}
+                strokeWidth={2}
+                strokeLinecap="round"
+              />
+            </Svg>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Cari kode atau nama dealer..."
+              placeholderTextColor={Colors.textTertiary}
+              value={search}
+              onChangeText={setSearch}
             />
-          </Svg>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Cari kode atau nama dealer..."
-            placeholderTextColor={Colors.textTertiary}
-            value={search}
-            onChangeText={setSearch}
-          />
+          </View>
         </View>
-      </View>
+      </TourGuideZone>
 
       <ScrollView
         style={styles.scrollView}
@@ -106,16 +170,33 @@ export default function DealerScreen() {
           {paddingBottom: Spacing.huge + insets.bottom},
         ]}
         showsVerticalScrollIndicator={false}>
-        {filteredDealers.map(dealer => (
-          <View key={dealer.code} style={styles.dealerCard}>
-            <View style={styles.codePill}>
-              <Text style={styles.codeText}>{dealer.code}</Text>
+        {filteredDealers.map((dealer, index) => {
+          const card = (
+            <View key={dealer.code} style={styles.dealerCard}>
+              <View style={styles.codePill}>
+                <Text style={styles.codeText}>{dealer.code}</Text>
+              </View>
+              <View style={styles.dealerMeta}>
+                <Text style={styles.dealerName}>{dealer.name}</Text>
+              </View>
             </View>
-            <View style={styles.dealerMeta}>
-              <Text style={styles.dealerName}>{dealer.name}</Text>
-            </View>
-          </View>
-        ))}
+          );
+
+          if (index === 0) {
+            return (
+              <TourGuideZone
+                key={dealer.code}
+                zone={2}
+                text="Setiap kartu menampilkan kode unik cabang dealer untuk menyortir berkas fisik BPKB."
+                borderRadius={16}
+                shape="rectangle">
+                {card}
+              </TourGuideZone>
+            );
+          }
+
+          return card;
+        })}
       </ScrollView>
     </View>
   );
@@ -167,7 +248,18 @@ const styles = StyleSheet.create({
     color: Colors.textHeadline,
   },
   topBarRightSlot: {
-    width: 40,
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarMascot: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.surface,
   },
   searchWrapper: {
     paddingHorizontal: Spacing.xl,

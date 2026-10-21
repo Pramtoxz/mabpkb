@@ -121,7 +121,12 @@ export default function ScanStep5Screen({navigation}: Props) {
           dealerName={state.dealer.nm_dealer}
           paymentType={state.dealer.payment_type}
         />
-      ) : null}
+      ) : (
+        <ScanTopDealerAlert
+          nomesin={state.nomesin}
+          isUnverified={true}
+        />
+      )}
 
       <View style={styles.cameraArea}>
         {hasPermission && device != null && (
@@ -132,6 +137,7 @@ export default function ScanStep5Screen({navigation}: Props) {
               isActive={isCameraActive}
               codeScanner={codeScanner}
               androidPreviewViewType="texture-view"
+              outputOrientation="preview"
               onError={handleCameraError}
             />
             <DocumentOverlay variant="barcode" />

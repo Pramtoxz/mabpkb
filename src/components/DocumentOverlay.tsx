@@ -142,18 +142,21 @@ const styles = StyleSheet.create({
   },
   dimTop: {
     flex: 1,
-    backgroundColor: Colors.dim,
+    backgroundColor: Colors.cameraMaskDark,
   },
   middleRow: {
     flexDirection: 'row',
   },
   dimSide: {
     flex: 1,
-    backgroundColor: Colors.dim,
+    backgroundColor: Colors.cameraMaskDark,
   },
   cutout: {
-    backgroundColor: 'transparent',
+    backgroundColor: Colors.transparent,
     overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: Colors.cutoutBorder,
+    borderRadius: 8,
   },
   cornerFrame: {
     ...(StyleSheet.absoluteFill as object),
@@ -173,7 +176,7 @@ const styles = StyleSheet.create({
   },
   dimBottom: {
     flex: 1,
-    backgroundColor: Colors.dim,
+    backgroundColor: Colors.cameraMaskDark,
     alignItems: 'center',
     paddingTop: 16,
   },
@@ -183,7 +186,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(67, 214, 173, 0.3)',
+    borderColor: Colors.cutoutBorderSubtle,
   },
   label: {
     fontFamily: 'Poppins-Medium',

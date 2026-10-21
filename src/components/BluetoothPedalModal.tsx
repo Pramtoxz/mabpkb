@@ -7,7 +7,7 @@ import {
   TouchableWithoutFeedback,
 } from 'react-native';
 import LottieView from 'lottie-react-native';
-import {Colors, Spacing, Radius} from '../constants';
+import {Colors, Spacing, Radius, Animations} from '../constants';
 import {useSound} from '../hooks/useSound';
 import {useHaptic} from '../hooks/useHaptic';
 export interface BluetoothPedalModalProps {
@@ -59,7 +59,7 @@ export default function BluetoothPedalModal({
             </View>
                 <View style={styles.lottieBox}>
               <LottieView
-                source={require('../assets/lottie/bluetooth.json')}
+                source={Animations.bluetooth}
                 autoPlay
                 loop
                 style={styles.lottie}
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   badgePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(67, 214, 173, 0.15)',
+    backgroundColor: Colors.badgePillMintBg,
     borderWidth: 1,
     borderColor: Colors.emeraldMint,
     paddingHorizontal: 14,

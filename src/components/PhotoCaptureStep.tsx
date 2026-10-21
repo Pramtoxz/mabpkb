@@ -1,6 +1,7 @@
 import React, {useCallback, useRef} from 'react';
 import {View, StyleSheet} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useIsFocused} from '@react-navigation/native';
 import {Colors, Spacing, Radius} from '../constants';
 import {useScan, type ScanImage} from '../contexts/ScanContext';
 import {useHardwareKey} from '../hooks/useHardwareKey';
@@ -48,13 +49,14 @@ export default function PhotoCaptureStep({
     [filename, onCaptured, onNext, step],
   );
 
+  const isFocused = useIsFocused();
   const handleRetake = useCallback(() => {
     if (nextTimerRef.current) {
       clearTimeout(nextTimerRef.current);
     }
   }, []);
 
-  useHardwareKey(handleRetake, true, 'volumeUp');
+  useHardwareKey(handleRetake, isFocused, 'volumeUp');
 
   return (
     <View style={[styles.container, {paddingBottom: insets.bottom + Spacing.sm}]}>
@@ -64,6 +66,11 @@ export default function PhotoCaptureStep({
         <ScanTopDealerAlert
           dealerName={state.dealer.nm_dealer}
           paymentType={state.dealer.payment_type}
+        />
+      ) : step >= 4 ? (
+        <ScanTopDealerAlert
+          nomesin={state.nomesin}
+          isUnverified={true}
         />
       ) : null}
 

@@ -1,23 +1,19 @@
 export const Colors = {
-  // Base Palette
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',
 
-  // Surfaces & Backgrounds (Diselaraskan dengan Cloud White ACIAX)
   background: '#F6F7FA',
   surface: '#FFFFFF',
   surfaceAlt: '#F0F2F6',
   cardBg: '#FFFFFF',
   darkCardBg: '#1E1E1E',
 
-  // Primary & Neutrals (Menggunakan Graphite & Violet khas ACIAX)
   primary: '#8052F5',
   onPrimary: '#FFFFFF',
   neutral: '#20232D',
   secondary: '#F3E8FF',
 
-  // Emerald / Brand Accents (Diharmoniskan dengan ACIAX Violet & Mint)
   emerald: '#8052F5',
   emeraldDark: '#6D28D9',
   emeraldLight: '#F3E8FF',
@@ -26,7 +22,6 @@ export const Colors = {
   accent: '#8052F5',
   accentLight: '#F3E8FF',
 
-  // Official ACIAX Brand System (ChatGPT Design Guideline)
   aciaxViolet: '#8052F5',
   aciaxVioletLight: '#F3E8FF',
   aciaxVioletDark: '#6D28D9',
@@ -36,7 +31,6 @@ export const Colors = {
   aciaxSuccessGreen: '#147D65',
   aciaxCloudWhite: '#F6F7FA',
 
-  // Status & Feedback
   success: '#10B981',
   successLight: '#ECFDF5',
   successDark: '#2D6B52',
@@ -48,7 +42,6 @@ export const Colors = {
   destructive: '#EF4444',
   notificationBadge: '#EF4444',
 
-  // Typography Colors (Menggunakan tone Graphite & Slate gelap)
   textPrimary: '#20232D',
   textSecondary: '#64748B',
   textTertiary: '#94A3B8',
@@ -61,13 +54,11 @@ export const Colors = {
   textMuted: '#78716C',
   textCharcoal: '#20232D',
 
-  // Borders & Dividers
   border: '#E2E8F0',
   borderLight: '#F1F5F9',
   dividerWave: '#FFFFFF',
   gaugeTrack: '#E2E8F0',
 
-  // Shadows & Overlays
   shadow: 'rgba(32, 35, 45, 0.08)',
   shadowDark: '#000000',
   ambientShadow: 'rgba(32, 35, 45, 0.06)',
@@ -77,8 +68,20 @@ export const Colors = {
   whiteTranslucent85: 'rgba(255, 255, 255, 0.85)',
   confettiOverlay: 'rgba(255, 255, 255, 0.25)',
   goldTint: 'rgba(212, 165, 74, 0.12)',
+  cameraMaskDark: 'rgba(15, 23, 42, 0.82)',
+  cutoutBorder: 'rgba(67, 214, 173, 0.45)',
+  cutoutBorderSubtle: 'rgba(67, 214, 173, 0.3)',
+  centeredModalBackdrop: 'rgba(15, 23, 42, 0.78)',
+  modalBackdropSubtle: 'rgba(15, 23, 42, 0.65)',
+  navButtonBg: 'rgba(255, 255, 255, 0.94)',
+  navButtonBorder: 'rgba(226, 232, 240, 0.9)',
+  navButtonDisabledBg: 'rgba(241, 245, 249, 0.5)',
+  unverifiedDarkCard: '#1E293B',
+  unverifiedIconCircle: 'rgba(245, 158, 11, 0.15)',
+  unverifiedSubText: '#FDE68A',
+  unverifiedBadgeBg: 'rgba(245, 158, 11, 0.2)',
+  badgePillMintBg: 'rgba(67, 214, 173, 0.15)',
 
-  // Satellite & Achievement Badges
   badgeStar: '#F59E0B',
   badgeStarBg: '#FEF3C7',
   badgeShield: '#8052F5',
@@ -92,8 +95,10 @@ export const Colors = {
   badgeOrange: '#EA580C',
   badgeOrangeBg: '#FFEDD5',
 
-  // Bottom Navigation Dock
   darkNavBar: '#161616',
   darkNavBarBorder: '#27272A',
   paginationInactive: '#E2E8F0',
+
+  appBarBgRgb: '247, 244, 239',
+  appBarBorderRgb: '232, 226, 216',
 } as const;
