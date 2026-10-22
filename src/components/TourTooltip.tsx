@@ -1,7 +1,8 @@
-import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
+import React, {useMemo} from 'react';
+import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native';
 import type {TooltipProps} from 'rn-tourguide';
-import {Colors, Spacing, Radius} from '../constants';
+import {Colors, Spacing, Radius, getRandomOtherMascot} from '../constants';
+import {markTourSeen} from '../utils/storage';
 
 export default function TourTooltip({
   isFirstStep,
@@ -11,18 +12,37 @@ export default function TourTooltip({
   handlePrev,
   handleStop,
 }: TooltipProps) {
+  const mascotSource = useMemo(() => getRandomOtherMascot(), []);
+  const stepOrder = currentStep?.order ?? 1;
+
+  const handleDismiss = () => {
+    markTourSeen('home');
+    handleStop?.();
+  };
+
   return (
     <View style={styles.card}>
+
       <View style={styles.headerRow}>
-        <View style={styles.badgePill}>
-          <Text style={styles.badgeText}>
-            Langkah {currentStep?.order ?? 1}
-          </Text>
+        <View style={styles.headerLeft}>
+          <Image
+            source={mascotSource}
+            style={styles.mascotAvatar}
+            resizeMode="cover"
+          />
+          <View style={styles.stepBadge}>
+            <Text style={styles.stepBadgeText}>
+              Langkah {stepOrder}
+            </Text>
+          </View>
         </View>
+
         <TouchableOpacity
-          onPress={handleStop}
+          onPress={handleDismiss}
           activeOpacity={0.7}
-          hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
+          hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}
+          accessibilityRole="button"
+          accessibilityLabel="Lewati Panduan">
           <Text style={styles.closeText}>Lewati</Text>
         </TouchableOpacity>
       </View>
@@ -36,15 +56,21 @@ export default function TourTooltip({
           <TouchableOpacity
             style={styles.secondaryButton}
             onPress={handlePrev}
-            activeOpacity={0.8}>
+            activeOpacity={0.8}
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+            accessibilityRole="button"
+            accessibilityLabel="Langkah Sebelumnya">
             <Text style={styles.secondaryButtonText}>Sebelumnya</Text>
           </TouchableOpacity>
         )}
 
         <TouchableOpacity
           style={[styles.primaryButton, isFirstStep && styles.primaryButtonFull]}
-          onPress={isLastStep ? handleStop : handleNext}
-          activeOpacity={0.85}>
+          onPress={isLastStep ? handleDismiss : handleNext}
+          activeOpacity={0.85}
+          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+          accessibilityRole="button"
+          accessibilityLabel={isLastStep ? 'Selesai Panduan' : 'Lanjut Panduan'}>
           <Text style={styles.primaryButtonText}>
             {isLastStep ? 'Selesai' : 'Lanjut'}
           </Text>
@@ -57,16 +83,19 @@ export default function TourTooltip({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
+    borderRadius: Radius.xl,
     padding: Spacing.lg,
-    width: 280,
+    width: 290,
     shadowColor: Colors.black,
     shadowOffset: {width: 0, height: 6},
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
     elevation: 8,
     borderWidth: 1,
     borderColor: Colors.borderLight,
+  },
+  progressBar: {
+    display: 'none',
   },
   headerRow: {
     flexDirection: 'row',
@@ -74,20 +103,35 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: Spacing.sm,
   },
-  badgePill: {
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  mascotAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.surface,
+  },
+  stepBadge: {
     backgroundColor: Colors.secondary,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: Radius.sm,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.secondary,
   },
-  badgeText: {
+  stepBadgeText: {
     fontFamily: 'Poppins-Bold',
-    fontSize: 11,
+    fontSize: 10.5,
     color: Colors.primary,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   closeText: {
-    fontFamily: 'Poppins-Medium',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 12,
     color: Colors.textTertiary,
   },
@@ -96,7 +140,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textHeadline,
     lineHeight: 19,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   footerRow: {
     flexDirection: 'row',
@@ -105,28 +149,35 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   secondaryButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: Radius.sm,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: Radius.md,
     backgroundColor: Colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   secondaryButtonText: {
-    fontFamily: 'Poppins-Medium',
+    fontFamily: 'Poppins-SemiBold',
     fontSize: 12,
     color: Colors.textSecondary,
   },
   primaryButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: Radius.sm,
+    paddingVertical: 7,
+    paddingHorizontal: 18,
+    borderRadius: Radius.md,
     backgroundColor: Colors.primary,
+    shadowColor: Colors.primary,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
   },
   primaryButtonFull: {
     flex: 1,
     alignItems: 'center',
   },
   primaryButtonText: {
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 12,
     color: Colors.white,
   },

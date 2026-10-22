@@ -1,4 +1,4 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useMemo, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,16 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  Image,
+  InteractionManager,
 } from 'react-native';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useIsFocused, useNavigation} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useTourGuideController} from 'rn-tourguide';
 import Svg, {Path} from 'react-native-svg';
-import {Colors, Spacing, Radius} from '../../constants';
+import {Colors, Spacing, Radius, getRandomOtherMascot} from '../../constants';
 import {useTabNav} from '../../contexts/TabNavContext';
+import {hasSeenTour, markTourSeen} from '../../utils/storage';
 import handoverData from '../../mock/handover.json';
 
 interface HandoverItem {
@@ -31,13 +35,56 @@ const HANDOVER_LIST: HandoverItem[] = handoverData as HandoverItem[];
 export default function HandoverScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
   const {setIsTabBarHidden} = useTabNav();
+  const mascotSource = useMemo(() => getRandomOtherMascot(), []);
+  const {start, stop, canStart, TourGuideZone} = useTourGuideController('handover');
+  const stopRef = useRef(stop);
+  stopRef.current = stop;
+  const startRef = useRef(start);
+  startRef.current = start;
+  const hasCheckedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isFocused || !canStart || hasCheckedRef.current) {
+      return;
+    }
+    hasCheckedRef.current = true;
+
+    if (hasSeenTour('handover')) {
+      return;
+    }
+
+    let isActive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (!isActive) {
+        return;
+      }
+      timer = setTimeout(() => {
+        if (isActive && !hasSeenTour('handover')) {
+          startRef.current?.();
+          markTourSeen('handover');
+        }
+      }, 500);
+    });
+
+    return () => {
+      isActive = false;
+      task.cancel();
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [canStart, isFocused]);
 
   useFocusEffect(
     useCallback(() => {
       setIsTabBarHidden(true);
       return () => {
         setIsTabBarHidden(false);
+        stopRef.current?.();
       };
     }, [setIsTabBarHidden]),
   );
@@ -73,7 +120,18 @@ export default function HandoverScreen() {
           <Text style={styles.topBarSubtitle}>Logistik Berkas Cabang</Text>
           <Text style={styles.topBarTitle}>Serah Terima BPKB</Text>
         </View>
-        <View style={styles.topBarRightSlot} />
+        <TouchableOpacity
+          style={styles.topBarRightSlot}
+          onPress={() => canStart && start()}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Buka Panduan Serah Terima">
+          <Image
+            source={mascotSource}
+            style={styles.topBarMascot}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -83,19 +141,25 @@ export default function HandoverScreen() {
           {paddingBottom: Spacing.huge + insets.bottom},
         ]}
         showsVerticalScrollIndicator={false}>
-        <View style={styles.bannerCard}>
-          <Text style={styles.bannerHeading}>Bukti Serah Terima Bertanda Tangan</Text>
-          <Text style={styles.bannerBody}>
-            Ketika dealer menjemput tumpukan fisik BPKB di meja
-            scanner, lakukan pemotretan lembar surat tanda terima yang telah
-            ditandatangani sebagai arsip digital resmi.
-          </Text>
-        </View>
+        <TourGuideZone
+          zone={1}
+          text="Panduan serah terima BPKB fisik kepada kurir atau dealer. Bukti surat tanda terima difoto sebagai arsip digital."
+          borderRadius={20}
+          shape="rectangle">
+          <View style={styles.bannerCard}>
+            <Text style={styles.bannerHeading}>Bukti Serah Terima Bertanda Tangan</Text>
+            <Text style={styles.bannerBody}>
+              Ketika dealer menjemput tumpukan fisik BPKB di meja
+              scanner, lakukan pemotretan lembar surat tanda terima yang telah
+              ditandatangani sebagai arsip digital resmi.
+            </Text>
+          </View>
+        </TourGuideZone>
 
         <View style={styles.list}>
-          {HANDOVER_LIST.map(item => {
+          {HANDOVER_LIST.map((item, index) => {
             const isDone = item.status === 'Selesai';
-            return (
+            const cardContent = (
               <View key={item.id} style={styles.itemCard}>
                 <View style={styles.cardHeader}>
                   <View style={styles.dealerRow}>
@@ -137,42 +201,100 @@ export default function HandoverScreen() {
 
                 <Text style={styles.notesText}>{item.notes}</Text>
 
-                <TouchableOpacity
-                  style={[
-                    styles.actionBtn,
-                    isDone ? styles.actionBtnDone : styles.actionBtnPending,
-                  ]}
-                  activeOpacity={0.8}>
-                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                    <Path
-                      d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
-                      stroke={isDone ? Colors.primary : Colors.white}
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <Path
-                      d="M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"
-                      stroke={isDone ? Colors.primary : Colors.white}
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </Svg>
-                  <Text
+                {index === 0 ? (
+                  <TourGuideZone
+                    zone={3}
+                    text="Ketuk tombol ini untuk memotret atau meninjau lembar tanda terima fisik bertanda tangan basah."
+                    borderRadius={12}
+                    shape="rectangle">
+                    <TouchableOpacity
+                      style={[
+                        styles.actionBtn,
+                        isDone ? styles.actionBtnDone : styles.actionBtnPending,
+                      ]}
+                      activeOpacity={0.8}>
+                      <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                        <Path
+                          d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+                          stroke={isDone ? Colors.primary : Colors.white}
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <Path
+                          d="M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"
+                          stroke={isDone ? Colors.primary : Colors.white}
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </Svg>
+                      <Text
+                        style={[
+                          styles.actionBtnText,
+                          isDone
+                            ? styles.actionBtnTextDone
+                            : styles.actionBtnTextPending,
+                        ]}>
+                        {item.hasSignedPhoto
+                          ? 'Lihat Foto Surat Bertanda Tangan'
+                          : 'Foto Surat Yang Ditandatangani'}
+                      </Text>
+                    </TouchableOpacity>
+                  </TourGuideZone>
+                ) : (
+                  <TouchableOpacity
                     style={[
-                      styles.actionBtnText,
-                      isDone
-                        ? styles.actionBtnTextDone
-                        : styles.actionBtnTextPending,
-                    ]}>
-                    {item.hasSignedPhoto
-                      ? 'Lihat Foto Surat Bertanda Tangan'
-                      : 'Foto Surat Yang Ditandatangani'}
-                  </Text>
-                </TouchableOpacity>
+                      styles.actionBtn,
+                      isDone ? styles.actionBtnDone : styles.actionBtnPending,
+                    ]}
+                    activeOpacity={0.8}>
+                    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
+                        stroke={isDone ? Colors.primary : Colors.white}
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <Path
+                        d="M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"
+                        stroke={isDone ? Colors.primary : Colors.white}
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                    <Text
+                      style={[
+                        styles.actionBtnText,
+                        isDone
+                          ? styles.actionBtnTextDone
+                          : styles.actionBtnTextPending,
+                      ]}>
+                      {item.hasSignedPhoto
+                        ? 'Lihat Foto Surat Bertanda Tangan'
+                        : 'Foto Surat Yang Ditandatangani'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             );
+
+            if (index === 0) {
+              return (
+                <TourGuideZone
+                  key={item.id}
+                  zone={2}
+                  text="Kartu serah terima memuat kode cabang, nomor surat jalan, jumlah berkas BPKB, dan status verifikasi."
+                  borderRadius={20}
+                  shape="rectangle">
+                  {cardContent}
+                </TourGuideZone>
+              );
+            }
+
+            return cardContent;
           })}
         </View>
       </ScrollView>
@@ -226,7 +348,18 @@ const styles = StyleSheet.create({
     color: Colors.textHeadline,
   },
   topBarRightSlot: {
-    width: 40,
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarMascot: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.surface,
   },
   scrollView: {
     flex: 1,

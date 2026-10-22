@@ -22,6 +22,10 @@ export default function ScanStep1Screen({navigation, route}: Props) {
       navigation.navigate('ScanReview');
       return;
     }
+    if (route.params?.returnToStep) {
+      navigation.navigate(`ScanStep${route.params.returnToStep}` as any);
+      return;
+    }
     navigation.navigate('ScanStep2');
   }, [navigation, route.params]);
 

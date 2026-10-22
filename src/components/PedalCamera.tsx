@@ -74,6 +74,12 @@ export default function PedalCamera({
     }
   }, [hasPermission, requestPermission]);
 
+  useEffect(() => {
+    if (isFocused) {
+      isCapturingRef.current = false;
+    }
+  }, [isFocused]);
+
   const handleCapture = useCallback(async () => {
     if (isCapturingRef.current || !cameraRef.current || !isActive) {
       return;
@@ -147,6 +153,7 @@ export default function PedalCamera({
         isActive={isActive}
         photo={true}
         androidPreviewViewType="texture-view"
+        outputOrientation="preview"
         onError={handleCameraError}
       />
       {overlayVariant !== 'none' && <DocumentOverlay variant={overlayVariant} />}

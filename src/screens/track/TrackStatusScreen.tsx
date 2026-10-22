@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState, useMemo} from 'react';
+import React, {useCallback, useEffect, useState, useMemo, useRef} from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   StatusBar,
   Linking,
   RefreshControl,
+  Image,
+  InteractionManager,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -18,13 +20,14 @@ import Animated, {
   withSequence,
   Easing,
 } from 'react-native-reanimated';
-import {useNavigation, useRoute, useIsFocused} from '@react-navigation/native';
+import {useNavigation, useRoute, useIsFocused, useFocusEffect} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useTourGuideController} from 'rn-tourguide';
 import Svg, {Path} from 'react-native-svg';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 import {Config} from 'react-native-config';
-import {Colors, Spacing, Radius} from '../../constants';
+import {Colors, Spacing, Radius, getRandomOtherMascot} from '../../constants';
 import {useTabNav} from '../../contexts/TabNavContext';
 import {useHardwareKey} from '../../hooks/useHardwareKey';
 import {useSound} from '../../hooks/useSound';
@@ -37,6 +40,7 @@ import {
   type BpkbHistoryItem,
 } from '../../api/endpoints';
 import DateFilterModal, {type DateRange} from '../../components/DateFilterModal';
+import {hasSeenTour, markTourSeen} from '../../utils/storage';
 import mockHistory from '../../mock/history.json';
 
 dayjs.locale('id');
@@ -64,6 +68,7 @@ export default function TrackStatusScreen() {
     pendingTrackId,
     setPendingTrackId,
     setIsPedalIntercepted,
+    setIsTabBarHidden,
   } = useTabNav();
   const {play: playSound} = useSound();
   const {trigger: haptic} = useHaptic();
@@ -72,6 +77,14 @@ export default function TrackStatusScreen() {
     route.params?.trackId ?? null,
   );
   const [trackDetail, setTrackDetail] = useState<BpkbTrackResponse | null>(null);
+  const mascotSource = useMemo(() => getRandomOtherMascot(), []);
+  const {start, stop, canStart, TourGuideZone} = useTourGuideController('trackStatus');
+  const stopRef = useRef(stop);
+  stopRef.current = stop;
+  const startRef = useRef(start);
+  startRef.current = start;
+  const hasCheckedRef = useRef(false);
+
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [activeSegment, setActiveSegment] = useState<'history' | 'sorting'>('history');
@@ -86,6 +99,50 @@ export default function TrackStatusScreen() {
   });
   const [historyList, setHistoryList] = useState<BpkbHistoryItem[]>(
     mockHistory as BpkbHistoryItem[],
+  );
+
+  useEffect(() => {
+    if (!isFocused || !canStart || hasCheckedRef.current) {
+      return;
+    }
+    hasCheckedRef.current = true;
+
+    if (hasSeenTour('trackStatus')) {
+      return;
+    }
+
+    let isActive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (!isActive) {
+        return;
+      }
+      timer = setTimeout(() => {
+        if (isActive && !hasSeenTour('trackStatus')) {
+          startRef.current?.();
+          markTourSeen('trackStatus');
+        }
+      }, 500);
+    });
+
+    return () => {
+      isActive = false;
+      task.cancel();
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [canStart, isFocused]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsTabBarHidden(true);
+      return () => {
+        setIsTabBarHidden(false);
+        stopRef.current?.();
+      };
+    }, [setIsTabBarHidden]),
   );
 
   const {data} = useBpkbStream(trackId);
@@ -322,7 +379,18 @@ export default function TrackStatusScreen() {
             <Text style={styles.topBarSubtitle}>Antrean Pemrosesan</Text>
             <Text style={styles.topBarTitle}>Status Proses BPKB</Text>
           </View>
-          <View style={styles.topBarRightSlot} />
+          <TouchableOpacity
+            style={styles.topBarRightSlot}
+            onPress={() => canStart && start()}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Buka Panduan Status Proses">
+            <Image
+              source={mascotSource}
+              style={styles.topBarMascot}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
         </View>
 
         <ScrollView
@@ -550,85 +618,111 @@ export default function TrackStatusScreen() {
           <Text style={styles.topBarSubtitle}>Statistik & Arsip Dokumen</Text>
           <Text style={styles.topBarTitle}>Riwayat BPKB</Text>
         </View>
-        <TouchableOpacity
-          style={[
-            styles.calendarButton,
-            Boolean(appliedDateRange.startDate) && styles.calendarButtonActive,
-          ]}
-          activeOpacity={0.7}
-          onPress={() => setShowDateFilter(true)}
-          hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
-          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 2v4M8 2v4M3 10h18"
-              stroke={
-                appliedDateRange.startDate ? Colors.primary : Colors.textHeadline
-              }
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </Svg>
-          {Boolean(appliedDateRange.startDate) && (
-            <View style={styles.calendarDot} />
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.segmentWrapper}>
-        <View style={styles.segmentContainer}>
+        <View style={styles.topBarRightGroup}>
           <TouchableOpacity
             style={[
-              styles.segmentItem,
-              activeSegment === 'history' && styles.segmentItemActive,
+              styles.calendarButton,
+              Boolean(appliedDateRange.startDate) && styles.calendarButtonActive,
             ]}
-            activeOpacity={0.8}
-            onPress={() => setActiveSegment('history')}>
-            <Text
-              style={[
-                styles.segmentText,
-                activeSegment === 'history' && styles.segmentTextActive,
-              ]}>
-              Daftar Riwayat ({filteredHistory.length})
-            </Text>
+            activeOpacity={0.7}
+            onPress={() => setShowDateFilter(true)}
+            hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
+            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 2v4M8 2v4M3 10h18"
+                stroke={
+                  appliedDateRange.startDate ? Colors.primary : Colors.textHeadline
+                }
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+            {Boolean(appliedDateRange.startDate) && (
+              <View style={styles.calendarDot} />
+            )}
           </TouchableOpacity>
           <TouchableOpacity
-            style={[
-              styles.segmentItem,
-              activeSegment === 'sorting' && styles.segmentItemActive,
-            ]}
+            style={styles.topBarRightSlot}
+            onPress={() => canStart && start()}
             activeOpacity={0.8}
-            onPress={() => setActiveSegment('sorting')}>
-            <Text
-              style={[
-                styles.segmentText,
-                activeSegment === 'sorting' && styles.segmentTextActive,
-              ]}>
-              Rekap Sortir
-            </Text>
+            accessibilityRole="button"
+            accessibilityLabel="Buka Panduan Riwayat BPKB">
+            <Image
+              source={mascotSource}
+              style={styles.topBarMascot}
+              resizeMode="cover"
+            />
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.searchWrapper}>
-        <View style={styles.searchBox}>
-          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35"
-              stroke={Colors.textSecondary}
-              strokeWidth={2}
-              strokeLinecap="round"
-            />
-          </Svg>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Cari no BPKB, mesin, konsumen..."
-            placeholderTextColor={Colors.textTertiary}
-            value={search}
-            onChangeText={setSearch}
-          />
+      <TourGuideZone
+        zone={1}
+        text="Beralih antara daftar urutan kronologis berkas masuk dan rekap sortir per cabang dealer."
+        borderRadius={16}
+        shape="rectangle">
+        <View style={styles.segmentWrapper}>
+          <View style={styles.segmentContainer}>
+            <TouchableOpacity
+              style={[
+                styles.segmentItem,
+                activeSegment === 'history' && styles.segmentItemActive,
+              ]}
+              activeOpacity={0.8}
+              onPress={() => setActiveSegment('history')}>
+              <Text
+                style={[
+                  styles.segmentText,
+                  activeSegment === 'history' && styles.segmentTextActive,
+                ]}>
+                Daftar Riwayat ({filteredHistory.length})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.segmentItem,
+                activeSegment === 'sorting' && styles.segmentItemActive,
+              ]}
+              activeOpacity={0.8}
+              onPress={() => setActiveSegment('sorting')}>
+              <Text
+                style={[
+                  styles.segmentText,
+                  activeSegment === 'sorting' && styles.segmentTextActive,
+                ]}>
+                Rekap Sortir
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </TourGuideZone>
+
+      <TourGuideZone
+        zone={2}
+        text="Pencarian cepat berdasarkan nomor BPKB, nomor mesin motor, nama konsumen, atau kode dealer."
+        borderRadius={16}
+        shape="rectangle">
+        <View style={styles.searchWrapper}>
+          <View style={styles.searchBox}>
+            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35"
+                stroke={Colors.textSecondary}
+                strokeWidth={2}
+                strokeLinecap="round"
+              />
+            </Svg>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Cari no BPKB, mesin, konsumen..."
+              placeholderTextColor={Colors.textTertiary}
+              value={search}
+              onChangeText={setSearch}
+            />
+          </View>
+        </View>
+      </TourGuideZone>
 
       {formattedAppliedDate && (
         <View style={styles.filterBannerWrapper}>
@@ -691,65 +785,82 @@ export default function TrackStatusScreen() {
               </Text>
             </View>
           ) : (
-            filteredHistory.map(item => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.historyCard}
-                activeOpacity={0.85}
-                onPress={() => setTrackId(item.id)}>
-                <View style={styles.historyCardTop}>
-                  <View style={styles.bpkbPill}>
-                    <Text style={styles.bpkbPillText}>{item.no_bpkb}</Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      item.status === 'completed'
-                        ? styles.statusBadgeDone
-                        : styles.statusBadgeProcess,
-                    ]}>
-                    <Text
+            filteredHistory.map((item, index) => {
+              const card = (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.historyCard}
+                  activeOpacity={0.85}
+                  onPress={() => setTrackId(item.id)}>
+                  <View style={styles.historyCardTop}>
+                    <View style={styles.bpkbPill}>
+                      <Text style={styles.bpkbPillText}>{item.no_bpkb}</Text>
+                    </View>
+                    <View
                       style={[
-                        styles.statusBadgeText,
+                        styles.statusBadge,
                         item.status === 'completed'
-                          ? styles.statusBadgeTextDone
-                          : styles.statusBadgeTextProcess,
+                          ? styles.statusBadgeDone
+                          : styles.statusBadgeProcess,
                       ]}>
-                      {item.status === 'completed' ? 'Selesai' : 'Diproses'}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.historyBody}>
-                  <View style={styles.historyMetaRow}>
-                    <Text style={styles.historyLabel}>No Mesin</Text>
-                    <Text style={styles.historyValue}>{item.no_mesin}</Text>
-                  </View>
-                  <View style={styles.historyMetaRow}>
-                    <Text style={styles.historyLabel}>Konsumen</Text>
-                    <Text style={styles.historyValue}>
-                      {item.nama_konsumen ?? '-'}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.historyFooter}>
-                  <View style={styles.dealerInfo}>
-                    <View style={styles.dealerCodeBadge}>
-                      <Text style={styles.dealerCodeText}>
-                        {item.dealer_code}
+                      <Text
+                        style={[
+                          styles.statusBadgeText,
+                          item.status === 'completed'
+                            ? styles.statusBadgeTextDone
+                            : styles.statusBadgeTextProcess,
+                        ]}>
+                        {item.status === 'completed' ? 'Selesai' : 'Diproses'}
                       </Text>
                     </View>
-                    <Text style={styles.dealerNameText} numberOfLines={1}>
-                      {item.dealer_name}
+                  </View>
+
+                  <View style={styles.historyBody}>
+                    <View style={styles.historyMetaRow}>
+                      <Text style={styles.historyLabel}>No Mesin</Text>
+                      <Text style={styles.historyValue}>{item.no_mesin}</Text>
+                    </View>
+                    <View style={styles.historyMetaRow}>
+                      <Text style={styles.historyLabel}>Konsumen</Text>
+                      <Text style={styles.historyValue}>
+                        {item.nama_konsumen ?? '-'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.historyFooter}>
+                    <View style={styles.dealerInfo}>
+                      <View style={styles.dealerCodeBadge}>
+                        <Text style={styles.dealerCodeText}>
+                          {item.dealer_code}
+                        </Text>
+                      </View>
+                      <Text style={styles.dealerNameText} numberOfLines={1}>
+                        {item.dealer_name}
+                      </Text>
+                    </View>
+                    <Text style={styles.historyTimeText}>
+                      {dayjs(item.created_at).format('DD/MM HH:mm')}
                     </Text>
                   </View>
-                  <Text style={styles.historyTimeText}>
-                    {dayjs(item.created_at).format('DD/MM HH:mm')}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))
+                </TouchableOpacity>
+              );
+
+              if (index === 0) {
+                return (
+                  <TourGuideZone
+                    key={item.id}
+                    zone={3}
+                    text="Kartu riwayat berkas. Ketuk kartu untuk melihat progres tahapan pembuatan PDF dan pembaruan stok dealer."
+                    borderRadius={18}
+                    shape="rectangle">
+                    {card}
+                  </TourGuideZone>
+                );
+              }
+
+              return card;
+            })
           )
         ) : (
           <View style={styles.sortingWrapper}>
@@ -866,8 +977,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.textHeadline,
   },
+  topBarRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   topBarRightSlot: {
-    width: 40,
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarMascot: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.surface,
   },
   calendarButton: {
     width: 40,

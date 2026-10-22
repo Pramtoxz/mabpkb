@@ -83,7 +83,7 @@ export default function WelcomeScreen() {
               </Svg>
             </View>
             <Text style={styles.headline}>
-              {'ACIAX\nSmart Scanning\nExperience'}
+              {'ACIAX\nSmart Scanner\nSystem'}
             </Text>
             <View style={styles.bylineBadge}>
               <Text style={styles.bylineText}>By IT MA</Text>
@@ -126,7 +126,7 @@ export default function WelcomeScreen() {
 
             <View style={styles.mascotCard}>
               <Image
-                source={Images.scannerMascot}
+                source={Images.mascotHome}
                 style={styles.mascotImage}
                 resizeMode="cover"
               />
@@ -201,8 +201,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   appBrandIcon: {
-    width: 20,
-    height: 20,
+    width: 16,
+    height: 16,
     borderRadius: 4,
   },
   appBrandText: {

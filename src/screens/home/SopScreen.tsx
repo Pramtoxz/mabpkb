@@ -1,4 +1,4 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useMemo, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,16 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  Image,
+  InteractionManager,
 } from 'react-native';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useIsFocused, useNavigation} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useTourGuideController} from 'rn-tourguide';
 import Svg, {Path} from 'react-native-svg';
-import {Colors, Spacing, Radius} from '../../constants';
+import {Colors, Spacing, Radius, getRandomOtherMascot} from '../../constants';
 import {useTabNav} from '../../contexts/TabNavContext';
+import {hasSeenTour, markTourSeen} from '../../utils/storage';
 import sopData from '../../mock/sop.json';
 
 interface SopItem {
@@ -26,13 +30,56 @@ const SOP_STEPS: SopItem[] = sopData as SopItem[];
 export default function SopScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
   const {setIsTabBarHidden} = useTabNav();
+  const mascotSource = useMemo(() => getRandomOtherMascot(), []);
+  const {start, stop, canStart, TourGuideZone} = useTourGuideController('sop');
+  const stopRef = useRef(stop);
+  stopRef.current = stop;
+  const startRef = useRef(start);
+  startRef.current = start;
+  const hasCheckedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isFocused || !canStart || hasCheckedRef.current) {
+      return;
+    }
+    hasCheckedRef.current = true;
+
+    if (hasSeenTour('sop')) {
+      return;
+    }
+
+    let isActive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (!isActive) {
+        return;
+      }
+      timer = setTimeout(() => {
+        if (isActive && !hasSeenTour('sop')) {
+          startRef.current?.();
+          markTourSeen('sop');
+        }
+      }, 500);
+    });
+
+    return () => {
+      isActive = false;
+      task.cancel();
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [canStart, isFocused]);
 
   useFocusEffect(
     useCallback(() => {
       setIsTabBarHidden(true);
       return () => {
         setIsTabBarHidden(false);
+        stopRef.current?.();
       };
     }, [setIsTabBarHidden]),
   );
@@ -68,7 +115,18 @@ export default function SopScreen() {
           <Text style={styles.topBarSubtitle}>Standar Operasional</Text>
           <Text style={styles.topBarTitle}>Panduan SOP Pemindaian</Text>
         </View>
-        <View style={styles.topBarRightSlot} />
+        <TouchableOpacity
+          style={styles.topBarRightSlot}
+          onPress={() => canStart && start()}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Buka Panduan SOP">
+          <Image
+            source={mascotSource}
+            style={styles.topBarMascot}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -78,46 +136,69 @@ export default function SopScreen() {
           {paddingBottom: Spacing.huge + insets.bottom},
         ]}
         showsVerticalScrollIndicator={false}>
-        <View style={styles.bannerCard}>
-          <Text style={styles.bannerHeading}>Alur Kerja Tripod & Pedal Kaki</Text>
-          <Text style={styles.bannerBody}>
-            Pastikan smartphone terpasang kuat pada tripod meja scanner. Letakkan
-            lembar BPKB tepat di area bidik kamera dan Tekan pedalkaki untuk
-            mengambil foto tanpa menyentuh layar.
-          </Text>
-        </View>
+        <TourGuideZone
+          zone={1}
+          text="Panduan setup tripod meja scanner dan pedal kaki agar hasil bidik stabil dan bebas blur."
+          borderRadius={20}
+          shape="rectangle">
+          <View style={styles.bannerCard}>
+            <Text style={styles.bannerHeading}>Alur Kerja Tripod & Pedal Kaki</Text>
+            <Text style={styles.bannerBody}>
+              Pastikan smartphone terpasang kuat pada tripod meja scanner. Letakkan
+              lembar BPKB tepat di area bidik kamera dan tekan pedal kaki untuk
+              mengambil foto tanpa menyentuh layar.
+            </Text>
+          </View>
+        </TourGuideZone>
 
         <View style={styles.stepList}>
-          {SOP_STEPS.map((item, index) => (
-            <View key={item.step} style={styles.stepCard}>
-              <View style={styles.stepHeaderRow}>
-                <View style={styles.stepBadge}>
-                  <Text style={styles.stepBadgeText}>{item.step}</Text>
+          {SOP_STEPS.map((item, index) => {
+            const card = (
+              <View key={item.step} style={styles.stepCard}>
+                <View style={styles.stepHeaderRow}>
+                  <View style={styles.stepBadge}>
+                    <Text style={styles.stepBadgeText}>{item.step}</Text>
+                  </View>
+                  <View style={styles.stepTitleBox}>
+                    <Text style={styles.stepIndexText}>Tahap {index + 1} dari {SOP_STEPS.length}</Text>
+                    <Text style={styles.stepTitle}>{item.title}</Text>
+                  </View>
                 </View>
-                <View style={styles.stepTitleBox}>
-                  <Text style={styles.stepIndexText}>Tahap {index + 1} dari {SOP_STEPS.length}</Text>
-                  <Text style={styles.stepTitle}>{item.title}</Text>
+
+                <Text style={styles.stepDescription}>{item.description}</Text>
+
+                <View style={styles.checkCard}>
+                  <View style={styles.checkIconBox}>
+                    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M20 6L9 17l-5-5"
+                        stroke={Colors.primary}
+                        strokeWidth={2.5}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                  </View>
+                  <Text style={styles.checkText}>{item.check}</Text>
                 </View>
               </View>
+            );
 
-              <Text style={styles.stepDescription}>{item.description}</Text>
+            if (index === 0) {
+              return (
+                <TourGuideZone
+                  key={item.step}
+                  zone={2}
+                  text="Ikuti 5 tahapan standar operasional pemindaian berkas BPKB secara berurutan."
+                  borderRadius={18}
+                  shape="rectangle">
+                  {card}
+                </TourGuideZone>
+              );
+            }
 
-              <View style={styles.checkCard}>
-                <View style={styles.checkIconBox}>
-                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                    <Path
-                      d="M20 6L9 17l-5-5"
-                      stroke={Colors.primary}
-                      strokeWidth={2.5}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </Svg>
-                </View>
-                <Text style={styles.checkText}>{item.check}</Text>
-              </View>
-            </View>
-          ))}
+            return card;
+          })}
         </View>
       </ScrollView>
     </View>
@@ -170,7 +251,18 @@ const styles = StyleSheet.create({
     color: Colors.textHeadline,
   },
   topBarRightSlot: {
-    width: 40,
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarMascot: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.surface,
   },
   scrollView: {
     flex: 1,

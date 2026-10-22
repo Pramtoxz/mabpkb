@@ -1,34 +1,23 @@
-import {useState, useEffect, useCallback, useRef} from 'react';
+import {useState, useEffect, useCallback} from 'react';
 import {NativeModules, DeviceEventEmitter, AppState} from 'react-native';
 
 const {PedalModule} = NativeModules;
 
-const INACTIVITY_TIMEOUT_MS = 60000;
-const BACKGROUND_POLL_INTERVAL_MS = 15000;
+const POLL_INTERVAL_MS = 2500;
 
 export function usePedalStatus() {
   const [isConnected, setIsConnected] = useState<boolean>(false);
-  const lastActivityRef = useRef<number>(0);
 
   const checkStatus = useCallback(async () => {
     try {
       if (PedalModule?.isPedalConnected) {
         const connected = await PedalModule.isPedalConnected();
-        if (connected) {
-          lastActivityRef.current = Date.now();
-          setIsConnected(true);
-        } else {
-          const isRecent = Date.now() - lastActivityRef.current < INACTIVITY_TIMEOUT_MS;
-          if (!isRecent) {
-            setIsConnected(false);
-          }
-        }
-      }
-    } catch {
-      const isRecent = Date.now() - lastActivityRef.current < INACTIVITY_TIMEOUT_MS;
-      if (!isRecent) {
+        setIsConnected(Boolean(connected));
+      } else {
         setIsConnected(false);
       }
+    } catch {
+      setIsConnected(false);
     }
   }, []);
 
@@ -39,15 +28,7 @@ export function usePedalStatus() {
       'onPedalStatusChange',
       (payload?: {connected?: boolean}) => {
         if (payload && typeof payload.connected === 'boolean') {
-          if (payload.connected) {
-            lastActivityRef.current = Date.now();
-            setIsConnected(true);
-          } else {
-            const isRecent = Date.now() - lastActivityRef.current < INACTIVITY_TIMEOUT_MS;
-            if (!isRecent) {
-              setIsConnected(false);
-            }
-          }
+          setIsConnected(payload.connected);
         }
       },
     );
@@ -55,7 +36,6 @@ export function usePedalStatus() {
     const keySub = DeviceEventEmitter.addListener(
       'onHardwareKeyPress',
       () => {
-        lastActivityRef.current = Date.now();
         setIsConnected(true);
       },
     );
@@ -66,12 +46,7 @@ export function usePedalStatus() {
       }
     });
 
-    const interval = setInterval(() => {
-      const isRecent = Date.now() - lastActivityRef.current < INACTIVITY_TIMEOUT_MS;
-      if (!isRecent) {
-        checkStatus();
-      }
-    }, BACKGROUND_POLL_INTERVAL_MS);
+    const interval = setInterval(checkStatus, POLL_INTERVAL_MS);
 
     return () => {
       clearInterval(interval);

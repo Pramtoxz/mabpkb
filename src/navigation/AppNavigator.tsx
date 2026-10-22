@@ -32,6 +32,14 @@ function NavigatorContent() {
   const lastModalTriggerRef = useRef<number>(0);
 
   useEffect(() => {
+    if (activeTab === 1) {
+      if (modalVisible) {
+        setModalVisible(false);
+      }
+      prevConnectedRef.current = isConnected;
+      return;
+    }
+
     if (prevConnectedRef.current === null) {
       prevConnectedRef.current = isConnected;
       return;
@@ -47,7 +55,7 @@ function NavigatorContent() {
       setModalVisible(true);
     }
     prevConnectedRef.current = isConnected;
-  }, [isConnected]);
+  }, [isConnected, activeTab, modalVisible]);
 
   const handlePedalOutside = useCallback(() => {
     const now = Date.now();

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {StatusBar} from 'react-native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
@@ -9,8 +9,12 @@ import {ScanProvider} from './src/contexts/ScanContext';
 import {AlertProvider} from './src/contexts/AlertContext';
 import {AppNavigator} from './src/navigation';
 import TourTooltip from './src/components/TourTooltip';
+import {initStorage} from './src/utils/storage';
 
 export default function App() {
+  useEffect(() => {
+    initStorage();
+  }, []);
   return (
     <GestureHandlerRootView style={{flex: 1}}>
       <SafeAreaProvider>

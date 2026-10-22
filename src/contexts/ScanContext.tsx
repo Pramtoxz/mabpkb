@@ -63,11 +63,11 @@ export function ScanProvider({children}: {children: React.ReactNode}) {
     setState(s => {
       switch (step) {
         case 1:
-          return {...s, photo1: null, photo2: null, photo3: null, photo4: null, nomesin: '', nobpkb: '', dealer: null};
+          return {...s, photo1: null};
         case 2:
-          return {...s, photo2: null, photo3: null, photo4: null, nomesin: '', nobpkb: '', dealer: null};
+          return {...s, photo2: null};
         case 3:
-          return {...s, photo3: null, photo4: null, nomesin: '', nobpkb: '', dealer: null};
+          return {...s, photo3: null, nomesin: '', dealer: null};
         case 4:
           return {...s, photo4: null, nobpkb: ''};
         default:

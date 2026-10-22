@@ -1,4 +1,4 @@
-import React, {useState, useCallback} from 'react';
+import React, {useState, useCallback, useMemo, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,16 @@ import {
   Linking,
   StatusBar,
   TouchableWithoutFeedback,
+  InteractionManager,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useIsFocused, useNavigation} from '@react-navigation/native';
+import {useTourGuideController} from 'rn-tourguide';
 import Svg, {Path, Rect, Line} from 'react-native-svg';
-import {Colors, Fonts, Images} from '../../constants';
+import {Colors, Fonts, Images, Radius, getRandomOtherMascot} from '../../constants';
 import {useTabNav} from '../../contexts/TabNavContext';
 import {useAlert} from '../../contexts/AlertContext';
+import {hasSeenTour, markTourSeen} from '../../utils/storage';
 import teamData from '../../mock/team.json';
 
 interface TeamMember {
@@ -40,15 +43,58 @@ const TEAM_MEMBERS: TeamMember[] = teamData as TeamMember[];
 
 export default function TeamScreen() {
   const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
   const {setIsTabBarHidden} = useTabNav();
   const {showAlert} = useAlert();
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const mascotSource = useMemo(() => getRandomOtherMascot(), []);
+  const {start, stop, canStart, TourGuideZone} = useTourGuideController('team');
+  const stopRef = useRef(stop);
+  stopRef.current = stop;
+  const startRef = useRef(start);
+  startRef.current = start;
+  const hasCheckedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isFocused || !canStart || hasCheckedRef.current) {
+      return;
+    }
+    hasCheckedRef.current = true;
+
+    if (hasSeenTour('team')) {
+      return;
+    }
+
+    let isActive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (!isActive) {
+        return;
+      }
+      timer = setTimeout(() => {
+        if (isActive && !hasSeenTour('team')) {
+          startRef.current?.();
+          markTourSeen('team');
+        }
+      }, 500);
+    });
+
+    return () => {
+      isActive = false;
+      task.cancel();
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [canStart, isFocused]);
 
   useFocusEffect(
     useCallback(() => {
       setIsTabBarHidden(true);
       return () => {
         setIsTabBarHidden(false);
+        stopRef.current?.();
       };
     }, [setIsTabBarHidden]),
   );
@@ -87,82 +133,116 @@ export default function TeamScreen() {
           </Svg>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Dapur Kami</Text>
-        <View style={styles.headerSpacer} />
+        <TouchableOpacity
+          style={styles.mascotButton}
+          onPress={() => canStart && start()}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Buka Panduan Dapur Kami">
+          <Image
+            source={mascotSource}
+            style={styles.topBarMascot}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.content}>
-        <View style={styles.introSection}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={Images.maLogo}
-              style={styles.logoMenaraAgung}
-              resizeMode="contain"
-            />
+        <TourGuideZone
+          zone={1}
+          text="Profil tim pengembang aplikasi ACIAX MABPKB di bawah naungan PT Menara Agung."
+          borderRadius={20}
+          shape="rectangle">
+          <View style={styles.introSection}>
+            <View style={styles.logoContainer}>
+              <Image
+                source={Images.maLogo}
+                style={styles.logoMenaraAgung}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.companyName}>PT Menara Agung</Text>
+            <Text style={styles.appTitle}>We Are Cooking</Text>
+            <Text style={styles.appDesc}>
+              Tim dev yang lagi masak sistem digitalisasi & scan BPKB dengan pedal Bluetooth
+            </Text>
           </View>
-          <Text style={styles.companyName}>PT Menara Agung</Text>
-          <Text style={styles.appTitle}>We Are Cooking</Text>
-          <Text style={styles.appDesc}>
-            Tim dev yang lagi masak sistem digitalisasi & scan BPKB dengan pedal Bluetooth
-          </Text>
-        </View>
+        </TourGuideZone>
 
         <View style={styles.cardsContainer}>
-          {TEAM_MEMBERS.map(member => (
-            <TouchableOpacity
-              key={member.id}
-              style={styles.card}
-              activeOpacity={0.75}
-              onPress={() => setSelectedMember(member)}>
-              <View
-                style={[
-                  styles.avatarContainer,
-                  {borderColor: member.tagColor},
-                ]}>
-                <Image
-                  source={MEMBER_IMAGES[member.id]}
-                  style={styles.avatar}
-                  resizeMode="contain"
-                />
-              </View>
-
-              <View style={styles.infoContainer}>
-                <View style={styles.nameRow}>
-                  <Text style={styles.name}>{member.name}</Text>
-                  <View
-                    style={[
-                      styles.roleBadge,
-                      {
-                        backgroundColor: `${member.tagColor}15`,
-                        borderColor: `${member.tagColor}35`,
-                      },
-                    ]}>
-                    <Text
-                      style={[
-                        styles.roleBadgeText,
-                        {color: member.tagColor},
-                      ]}>
-                      {member.badgeRole}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={styles.summaryText} numberOfLines={1}>
-                  {member.summary}
-                </Text>
-              </View>
-
-              <View style={styles.chevronBox}>
-                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                  <Path
-                    d="M9 18l6-6-6-6"
-                    stroke={Colors.textTertiary}
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+          {TEAM_MEMBERS.map((member, index) => {
+            const card = (
+              <TouchableOpacity
+                key={member.id}
+                style={styles.card}
+                activeOpacity={0.75}
+                onPress={() => setSelectedMember(member)}>
+                <View
+                  style={[
+                    styles.avatarContainer,
+                    {borderColor: member.tagColor},
+                  ]}>
+                  <Image
+                    source={MEMBER_IMAGES[member.id]}
+                    style={styles.avatar}
+                    resizeMode="contain"
                   />
-                </Svg>
-              </View>
-            </TouchableOpacity>
-          ))}
+                </View>
+
+                <View style={styles.infoContainer}>
+                  <View style={styles.nameRow}>
+                    <Text style={styles.name}>{member.name}</Text>
+                    <View
+                      style={[
+                        styles.roleBadge,
+                        {
+                          backgroundColor: `${member.tagColor}15`,
+                          borderColor: `${member.tagColor}35`,
+                        },
+                      ]}>
+                      <Text
+                        style={[
+                          styles.roleBadgeText,
+                          {color: member.tagColor},
+                        ]}>
+                        {member.badgeRole}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.summaryText} numberOfLines={1}>
+                    {member.summary}
+                  </Text>
+                </View>
+
+                <View style={styles.chevronBox}>
+                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M9 18l6-6-6-6"
+                      stroke={Colors.textTertiary}
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                </View>
+              </TouchableOpacity>
+            );
+
+            if (index === 0) {
+              return (
+                <TourGuideZone
+                  key={member.id}
+                  zone={2}
+                  text="Ketuk kartu anggota tim untuk melihat detail peran, kontribusi arsitektur, dan tautan profil Instagram."
+                  borderRadius={18}
+                  shape="rectangle">
+                  {card}
+                </TourGuideZone>
+              );
+            }
+
+            return card;
+          })}
         </View>
 
         <View style={styles.footer}>
@@ -343,8 +423,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.textHeadline,
   },
-  headerSpacer: {
-    width: 40,
+  mascotButton: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarMascot: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.surface,
   },
   content: {
     flex: 1,
@@ -479,7 +570,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: Colors.modalBackdropSubtle,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,

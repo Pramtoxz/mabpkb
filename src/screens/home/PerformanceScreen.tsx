@@ -1,4 +1,4 @@
-import React, {useCallback, useState, useMemo} from 'react';
+import React, {useCallback, useState, useMemo, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,20 @@ import {
   ScrollView,
   StatusBar,
   RefreshControl,
+  Image,
+  InteractionManager,
 } from 'react-native';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useIsFocused, useNavigation} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useTourGuideController} from 'rn-tourguide';
 import Svg, {Path} from 'react-native-svg';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
-import {Colors, Spacing, Radius} from '../../constants';
+import {Colors, Spacing, Radius, getRandomOtherMascot} from '../../constants';
 import {useTabNav} from '../../contexts/TabNavContext';
 import DateFilterModal, {DateRange} from '../../components/DateFilterModal';
 import {getPerformance, type PerformanceResponse} from '../../api/endpoints';
+import {hasSeenTour, markTourSeen} from '../../utils/storage';
 import perfData from '../../mock/performance.json';
 
 dayjs.locale('id');
@@ -24,7 +28,15 @@ dayjs.locale('id');
 export default function PerformanceScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
   const {setIsTabBarHidden} = useTabNav();
+  const mascotSource = useMemo(() => getRandomOtherMascot(), []);
+  const {start, stop, canStart, TourGuideZone} = useTourGuideController('performance');
+  const stopRef = useRef(stop);
+  stopRef.current = stop;
+  const startRef = useRef(start);
+  startRef.current = start;
+  const hasCheckedRef = useRef(false);
 
   const [perfResult, setPerfResult] = useState<PerformanceResponse>(perfData);
   const [refreshing, setRefreshing] = useState(false);
@@ -38,6 +50,40 @@ export default function PerformanceScreen() {
     startDate: undefined,
     endDate: undefined,
   });
+
+  useEffect(() => {
+    if (!isFocused || !canStart || hasCheckedRef.current) {
+      return;
+    }
+    hasCheckedRef.current = true;
+
+    if (hasSeenTour('performance')) {
+      return;
+    }
+
+    let isActive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (!isActive) {
+        return;
+      }
+      timer = setTimeout(() => {
+        if (isActive && !hasSeenTour('performance')) {
+          startRef.current?.();
+          markTourSeen('performance');
+        }
+      }, 500);
+    });
+
+    return () => {
+      isActive = false;
+      task.cancel();
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [canStart, isFocused]);
 
   const loadData = useCallback(async (range?: DateRange) => {
     try {
@@ -57,6 +103,7 @@ export default function PerformanceScreen() {
       loadData(appliedRange);
       return () => {
         setIsTabBarHidden(false);
+        stopRef.current?.();
       };
     }, [setIsTabBarHidden, loadData, appliedRange]),
   );
@@ -140,25 +187,46 @@ export default function PerformanceScreen() {
           <Text style={styles.topBarSubtitle}>Statistik Operator 08:00 - 16:00</Text>
           <Text style={styles.topBarTitle}>Grafik Performa</Text>
         </View>
-        <TouchableOpacity
-          style={[
-            styles.calendarButton,
-            Boolean(appliedRange.startDate) && styles.calendarButtonActive,
-          ]}
-          activeOpacity={0.7}
-          onPress={() => setShowDateFilter(true)}
-          hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
-          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 2v4M8 2v4M3 10h18"
-              stroke={appliedRange.startDate ? Colors.primary : Colors.textHeadline}
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        <View style={styles.topBarRightGroup}>
+          <TourGuideZone
+            zone={1}
+            text="Filter rentang tanggal untuk menganalisis produktivitas pemindaian BPKB pada periode tertentu."
+            borderRadius={20}
+            shape="rectangle">
+            <TouchableOpacity
+              style={[
+                styles.calendarButton,
+                Boolean(appliedRange.startDate) && styles.calendarButtonActive,
+              ]}
+              activeOpacity={0.7}
+              onPress={() => setShowDateFilter(true)}
+              hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 2v4M8 2v4M3 10h18"
+                  stroke={appliedRange.startDate ? Colors.primary : Colors.textHeadline}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+              {Boolean(appliedRange.startDate) && <View style={styles.calendarDot} />}
+            </TouchableOpacity>
+          </TourGuideZone>
+
+          <TouchableOpacity
+            style={styles.mascotButton}
+            onPress={() => canStart && start()}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Buka Panduan Grafik Performa">
+            <Image
+              source={mascotSource}
+              style={styles.topBarMascot}
+              resizeMode="cover"
             />
-          </Svg>
-          {Boolean(appliedRange.startDate) && <View style={styles.calendarDot} />}
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -232,65 +300,83 @@ export default function PerformanceScreen() {
           </TouchableOpacity>
         )}
 
-        <View style={styles.heroMetricCard}>
-          <Text style={styles.heroMetricLabel}>
-            {formattedPeriod
-              ? `Total BPKB (${formattedPeriod})`
-              : 'Total BPKB Bulan Ini'}
-          </Text>
-          <View style={styles.heroNumberRow}>
-            <Text style={styles.heroMetricNumber}>
-              {displayedSummary.totalThisMonth}
+        <TourGuideZone
+          zone={2}
+          text="Statistik pencapaian kuota BPKB terproses terhadap target bulan berjalan secara real-time."
+          borderRadius={20}
+          shape="rectangle">
+          <View style={styles.heroMetricCard}>
+            <Text style={styles.heroMetricLabel}>
+              {formattedPeriod
+                ? `Total BPKB (${formattedPeriod})`
+                : 'Total BPKB Bulan Ini'}
             </Text>
-            <Text style={styles.heroMetricTarget}>
-              / {displayedSummary.targetThisMonth} Target
+            <View style={styles.heroNumberRow}>
+              <Text style={styles.heroMetricNumber}>
+                {displayedSummary.totalThisMonth}
+              </Text>
+              <Text style={styles.heroMetricTarget}>
+                / {displayedSummary.targetThisMonth} Target
+              </Text>
+            </View>
+            <View style={styles.progressBarBg}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  {width: `${displayedSummary.achievementPercentage}%`},
+                ]}
+              />
+            </View>
+            <Text style={styles.heroAchievementText}>
+              {displayedSummary.achievementPercentage}% Target Telah Tercapai
             </Text>
           </View>
-          <View style={styles.progressBarBg}>
-            <View
-              style={[
-                styles.progressBarFill,
-                {width: `${displayedSummary.achievementPercentage}%`},
-              ]}
-            />
-          </View>
-          <Text style={styles.heroAchievementText}>
-            {displayedSummary.achievementPercentage}% Target Telah Tercapai
-          </Text>
-        </View>
+        </TourGuideZone>
 
-        <View style={styles.kpiRow}>
-          <View style={styles.kpiBox}>
-            <Text style={styles.kpiBoxLabel}>Kecepatan Rata-rata</Text>
-            <Text style={styles.kpiBoxValue}>{displayedSummary.avgScanSeconds} Detik</Text>
-            <Text style={styles.kpiBoxSub}>per dokumen BPKB</Text>
+        <TourGuideZone
+          zone={3}
+          text="Indikator performa operasional: kecepatan rata-rata per berkas dan tingkat akurasi OCR nomor rangka."
+          borderRadius={16}
+          shape="rectangle">
+          <View style={styles.kpiRow}>
+            <View style={styles.kpiBox}>
+              <Text style={styles.kpiBoxLabel}>Kecepatan Rata-rata</Text>
+              <Text style={styles.kpiBoxValue}>{displayedSummary.avgScanSeconds} Detik</Text>
+              <Text style={styles.kpiBoxSub}>per dokumen BPKB</Text>
+            </View>
+            <View style={styles.kpiBox}>
+              <Text style={styles.kpiBoxLabel}>Akurasi OCR</Text>
+              <Text style={styles.kpiBoxValue}>{displayedSummary.accuracyRate}%</Text>
+              <Text style={styles.kpiBoxSub}>validasi nomor rangka</Text>
+            </View>
           </View>
-          <View style={styles.kpiBox}>
-            <Text style={styles.kpiBoxLabel}>Akurasi OCR</Text>
-            <Text style={styles.kpiBoxValue}>{displayedSummary.accuracyRate}%</Text>
-            <Text style={styles.kpiBoxSub}>validasi nomor rangka</Text>
-          </View>
-        </View>
+        </TourGuideZone>
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Pencapaian Mingguan (Senin - Sabtu)</Text>
-          <View style={styles.barChartRow}>
-            {weekly.map(item => {
-              const heightPercent = Math.min((item.completed / 100) * 100, 100);
-              return (
-                <View key={item.day} style={styles.barCol}>
-                  <Text style={styles.barValText}>{item.completed}</Text>
-                  <View style={styles.barTrack}>
-                    <View
-                      style={[styles.barFill, {height: `${heightPercent}%`}]}
-                    />
+        <TourGuideZone
+          zone={4}
+          text="Diagram batang produktivitas harian tim scanner sepanjang minggu kerja (Senin sampai Sabtu)."
+          borderRadius={20}
+          shape="rectangle">
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Pencapaian Mingguan (Senin - Sabtu)</Text>
+            <View style={styles.barChartRow}>
+              {weekly.map(item => {
+                const heightPercent = Math.min((item.completed / 100) * 100, 100);
+                return (
+                  <View key={item.day} style={styles.barCol}>
+                    <Text style={styles.barValText}>{item.completed}</Text>
+                    <View style={styles.barTrack}>
+                      <View
+                        style={[styles.barFill, {height: `${heightPercent}%`}]}
+                      />
+                    </View>
+                    <Text style={styles.barDayText}>{item.day}</Text>
                   </View>
-                  <Text style={styles.barDayText}>{item.day}</Text>
-                </View>
-              );
-            })}
+                );
+              })}
+            </View>
           </View>
-        </View>
+        </TourGuideZone>
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Tren 6 Bulan Terakhir</Text>
@@ -398,6 +484,25 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: Radius.full,
     backgroundColor: Colors.primary,
+  },
+  topBarRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  mascotButton: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarMascot: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.surface,
   },
   scrollView: {
     flex: 1,

@@ -41,6 +41,7 @@ class MainActivity : ReactActivity(), InputManager.InputDeviceListener {
       addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
       addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
       addAction(BluetoothAdapter.ACTION_STATE_CHANGED)
+      addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
     }
     try {
       if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
@@ -101,11 +102,7 @@ class MainActivity : ReactActivity(), InputManager.InputDeviceListener {
     }
 
     val isBt = try {
-      val profiles = intArrayOf(
-        BluetoothProfile.A2DP,
-        BluetoothProfile.HEADSET,
-        4
-      )
+      val profiles = intArrayOf(4)
       profiles.any { adapter.getProfileConnectionState(it) == BluetoothProfile.STATE_CONNECTED }
     } catch (_: Exception) {
       false

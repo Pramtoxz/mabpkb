@@ -19,7 +19,7 @@ export default function ShiftProductivityCard({
   return (
    <View style={styles.card}>
   <View style={styles.leftCol}>
-    <Text style={styles.categoryTitle}>Lagi Masak Hari Ini</Text>
+    <Text style={styles.categoryTitle}>Semangat Scan BPKB Hari Ini!</Text>
     <Text style={styles.targetLabel}>Progres kamu</Text>
     <View style={styles.numberRow}>
       <Text style={styles.completedNumber}>{completed}</Text>
@@ -33,7 +33,7 @@ export default function ShiftProductivityCard({
 
       <View style={styles.rightCol}>
         <View style={styles.gaugeContainer}>
-          <Svg width={110} height={66} viewBox="0 0 100 60">
+          <Svg width={102} height={61} viewBox="0 0 100 60">
             <Defs>
               <SvgLinearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <Stop offset="0%" stopColor={Colors.primary} />
@@ -72,18 +72,18 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderRadius: Radius.xl,
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.lg,
+    paddingVertical: 14,
     marginHorizontal: Spacing.xl,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.md,
+    marginTop: 4,
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     shadowColor: Colors.shadowDark,
-    shadowOffset: {width: 0, height: 6},
+    shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
+    shadowRadius: 14,
+    elevation: 3,
     borderWidth: 1,
     borderColor: Colors.borderLight,
   },
@@ -93,15 +93,15 @@ const styles = StyleSheet.create({
   },
   categoryTitle: {
     fontFamily: 'Poppins-Bold',
-    fontSize: 13,
+    fontSize: 12.5,
     color: Colors.textHeadline,
     marginBottom: 2,
   },
   targetLabel: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 11,
+    fontSize: 10.5,
     color: Colors.textSecondary,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   numberRow: {
     flexDirection: 'row',
@@ -109,26 +109,26 @@ const styles = StyleSheet.create({
   },
   completedNumber: {
     fontFamily: 'Poppins-Bold',
-    fontSize: 26,
+    fontSize: 25,
     color: Colors.textHeadline,
-    lineHeight: 32,
+    lineHeight: 30,
   },
   targetNumber: {
     fontFamily: 'Poppins-Medium',
-    fontSize: 15,
+    fontSize: 14,
     color: Colors.textTertiary,
   },
   unitText: {
     fontFamily: 'Poppins-Medium',
-    fontSize: 11.5,
+    fontSize: 11,
     color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
+    marginBottom: 4,
   },
   remainingBadge: {
     alignSelf: 'flex-start',
     backgroundColor: Colors.secondary,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 2.5,
     borderRadius: Radius.full,
   },
   remainingText: {
@@ -144,20 +144,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    width: 110,
-    height: 66,
+    width: 102,
+    height: 61,
   },
   gaugeTextOverlay: {
     position: 'absolute',
-    top: 26,
+    top: 23,
     alignItems: 'center',
     justifyContent: 'center',
   },
   gaugePctText: {
     fontFamily: 'Poppins-Bold',
-    fontSize: 17,
+    fontSize: 16,
     color: Colors.textHeadline,
-    lineHeight: 20,
+    lineHeight: 19,
   },
   gaugeSubText: {
     fontFamily: 'Poppins-Regular',

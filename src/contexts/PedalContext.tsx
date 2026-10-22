@@ -19,12 +19,15 @@ const PedalContext = createContext<PedalContextType | undefined>(undefined);
 
 export function PedalProvider({children}: {children: React.ReactNode}) {
   const callbackRef = useRef<PedalCallback | null>(null);
+  const lastPressRef = useRef<number>(0);
 
   useEffect(() => {
     const subscription = DeviceEventEmitter.addListener(
       'onHardwareKeyPress',
       (payload?: {key?: string}) => {
-        if (payload?.key === 'volumeDown') {
+        const now = Date.now();
+        if (payload?.key === 'volumeDown' && now - lastPressRef.current > 600) {
+          lastPressRef.current = now;
           callbackRef.current?.();
         }
       },

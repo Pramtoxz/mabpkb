@@ -13,10 +13,10 @@ export type HomeStackParamList = {
 };
 
 export type ScanStackParamList = {
-  ScanStep1: {returnToReview?: boolean} | undefined;
-  ScanStep2: {returnToReview?: boolean} | undefined;
-  ScanStep3: {returnToReview?: boolean} | undefined;
-  ScanStep4: {returnToReview?: boolean} | undefined;
+  ScanStep1: {returnToReview?: boolean; returnToStep?: number} | undefined;
+  ScanStep2: {returnToReview?: boolean; returnToStep?: number} | undefined;
+  ScanStep3: {returnToReview?: boolean; returnToStep?: number} | undefined;
+  ScanStep4: {returnToReview?: boolean; returnToStep?: number} | undefined;
   ScanStep5: undefined;
   ScanReview: undefined;
 };

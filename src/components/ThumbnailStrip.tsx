@@ -56,7 +56,11 @@ export default function ThumbnailStrip({
       return;
     }
     retakeFromStep(step);
-    navigation.navigate(`ScanStep${step}`);
+    if (currentStep > step) {
+      navigation.navigate(`ScanStep${step}`, {returnToStep: currentStep});
+    } else {
+      navigation.navigate(`ScanStep${step}`);
+    }
   };
 
   const previewPhoto = previewStep != null ? photos[previewStep - 1] : null;

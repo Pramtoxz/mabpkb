@@ -27,11 +27,7 @@ class PedalModule(private val reactCtx: ReactApplicationContext) : ReactContextB
       }
 
       val isBt = try {
-        val profiles = intArrayOf(
-          BluetoothProfile.A2DP,
-          BluetoothProfile.HEADSET,
-          4
-        )
+        val profiles = intArrayOf(4)
         profiles.any { adapter.getProfileConnectionState(it) == BluetoothProfile.STATE_CONNECTED }
       } catch (_: Exception) {
         false

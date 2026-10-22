@@ -47,9 +47,8 @@ export async function processScanImage(
   try {
     const rawPath = uriToFilePath(uri);
     let base64 = '';
+    let tempResizedPath: string | null = null;
     try {
-      base64 = await RNFS.readFile(rawPath, 'base64');
-    } catch {
       const resized = await ImageResizer.createResizedImage(
         `file://${rawPath}`,
         1920,
@@ -58,10 +57,16 @@ export async function processScanImage(
         90,
         0,
       );
+      tempResizedPath = resized.path;
       base64 = await RNFS.readFile(resized.path, 'base64');
-      try {
-        await RNFS.unlink(resized.path);
-      } catch {}
+    } catch {
+      base64 = await RNFS.readFile(rawPath, 'base64');
+    } finally {
+      if (tempResizedPath) {
+        try {
+          await RNFS.unlink(tempResizedPath);
+        } catch {}
+      }
     }
 
     const src = track(Mat.createFromBase64(base64));
@@ -74,7 +79,7 @@ export async function processScanImage(
     let workingMat = src;
     if (src.cols > src.rows) {
       const rotated = track(Mat.create(src.cols, src.rows, DataTypes.CV_8UC3));
-      OpenCV.rotate(src, rotated, RotateFlags.ROTATE_90_COUNTERCLOCKWISE);
+      OpenCV.rotate(src, rotated, RotateFlags.ROTATE_90_CLOCKWISE);
       workingMat = rotated;
     }
 

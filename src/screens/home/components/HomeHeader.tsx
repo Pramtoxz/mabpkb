@@ -30,12 +30,12 @@ export default function HomeHeader({
         accessibilityRole="button"
         accessibilityLabel="Mulai Panduan">
         <Image
-          source={Images.scannerMascot}
+          source={Images.mascotHome}
           style={styles.avatarImage}
           resizeMode="cover"
         />
         <View style={styles.guideBadge}>
-          <Text style={styles.guideBadgeText}>Panduan</Text>
+          <Text style={styles.guideBadgeText}>Aciax</Text>
         </View>
       </TouchableOpacity>
     </View>
@@ -48,8 +48,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
+    paddingTop: 8,
+    paddingBottom: 4,
   },
   textColumn: {
     flex: 1,
@@ -57,32 +57,32 @@ const styles = StyleSheet.create({
   },
   appNameText: {
     fontFamily: 'Poppins-Bold',
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.primary,
     letterSpacing: 0.8,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   greetingText: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.textSecondary,
-    lineHeight: 18,
+    lineHeight: 17,
   },
   operatorText: {
     fontFamily: 'Poppins-Bold',
-    fontSize: 22,
+    fontSize: 21,
     color: Colors.textHeadline,
-    lineHeight: 28,
+    lineHeight: 26,
   },
   avatarCard: {
-    width: 64,
-    height: 64,
+    width: 56,
+    height: 56,
     borderRadius: Radius.xl,
     backgroundColor: Colors.surface,
     padding: 3,
     shadowColor: Colors.primary,
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.16,
+    shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 4,
     borderWidth: 1.5,
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   },
   guideBadge: {
     position: 'absolute',
-    bottom: -6,
+    bottom: -5,
     backgroundColor: Colors.primary,
     paddingHorizontal: 6,
     paddingVertical: 1,
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   },
   guideBadgeText: {
     fontFamily: 'Poppins-Bold',
-    fontSize: 9,
+    fontSize: 8.5,
     color: Colors.white,
     letterSpacing: 0.3,
   },

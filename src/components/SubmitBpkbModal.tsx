@@ -6,7 +6,7 @@ import {
   Modal,
 } from 'react-native';
 import LottieView from 'lottie-react-native';
-import {Colors, Spacing, Radius} from '../constants';
+import {Colors, Spacing, Radius, Animations} from '../constants';
 
 export interface SubmitBpkbModalProps {
   visible: boolean;
@@ -47,14 +47,14 @@ export default function SubmitBpkbModal({
           <View style={styles.lottieBox}>
             {isSuccess ? (
               <LottieView
-                source={require('../assets/lottie/success.json')}
+                source={Animations.success}
                 autoPlay
                 loop={false}
                 style={styles.lottie}
               />
             ) : (
               <LottieView
-                source={require('../assets/lottie/business.json')}
+                source={Animations.business}
                 autoPlay
                 loop
                 style={styles.lottie}

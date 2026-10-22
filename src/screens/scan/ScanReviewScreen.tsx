@@ -12,11 +12,14 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useIsFocused} from '@react-navigation/native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import ConfettiCannon from 'react-native-confetti-cannon';
+import ImageResizer from '@bam.tech/react-native-image-resizer';
+import Svg, {Path} from 'react-native-svg';
 import type {ScanStackParamList} from '../../navigation/types';
 import {Colors, Typography, Spacing, Radius} from '../../constants';
-import {useScan} from '../../contexts/ScanContext';
+import {useScan, type ScanImage} from '../../contexts/ScanContext';
 import {useSound} from '../../hooks/useSound';
 import {useHaptic} from '../../hooks/useHaptic';
 import {useHardwareKey} from '../../hooks/useHardwareKey';
@@ -42,8 +45,9 @@ const SLIDES: SlideItem[] = [
 
 export default function ScanReviewScreen({navigation}: Props) {
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
   const {width: screenWidth} = useWindowDimensions();
-  const {state, resetScan} = useScan();
+  const {state, setPhoto1, setPhoto2, setPhoto3, setPhoto4, resetScan} = useScan();
   const {play: playSound} = useSound();
   const {trigger: haptic} = useHaptic();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -51,10 +55,36 @@ export default function ScanReviewScreen({navigation}: Props) {
   const [submitStatus, setSubmitStatus] = useState<'submitting' | 'success'>('submitting');
   const [showConfetti, setShowConfetti] = useState(false);
   const [errorText, setErrorText] = useState('');
+  const [rotating, setRotating] = useState(false);
   const isSubmittingRef = useRef(false);
+  const flatListRef = useRef<FlatList>(null);
 
   const photos = [state.photo1, state.photo2, state.photo3, state.photo4];
   const carouselWidth = screenWidth - Spacing.lg * 2;
+
+  const scrollToIndex = useCallback(
+    (index: number) => {
+      if (index >= 0 && index < SLIDES.length) {
+        flatListRef.current?.scrollToIndex({index, animated: true});
+        setActiveIndex(index);
+        haptic('detect');
+        playSound('tick');
+      }
+    },
+    [haptic, playSound],
+  );
+
+  const handlePrev = useCallback(() => {
+    if (activeIndex > 0) {
+      scrollToIndex(activeIndex - 1);
+    }
+  }, [activeIndex, scrollToIndex]);
+
+  const handleNext = useCallback(() => {
+    if (activeIndex < SLIDES.length - 1) {
+      scrollToIndex(activeIndex + 1);
+    }
+  }, [activeIndex, scrollToIndex]);
 
   const onScrollEnd = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -73,6 +103,37 @@ export default function ScanReviewScreen({navigation}: Props) {
       navigation.navigate(target.routeName, {returnToReview: true});
     }
   }, [activeIndex, navigation]);
+
+  const handleRotateCurrent = useCallback(async () => {
+    const photo = photos[activeIndex];
+    if (!photo?.uri || rotating) {
+      return;
+    }
+    setRotating(true);
+    haptic('detect');
+    playSound('tick');
+    try {
+      const res = await ImageResizer.createResizedImage(
+        photo.uri,
+        1920,
+        1920,
+        'JPEG',
+        90,
+        180,
+      );
+      const updated: ScanImage = {
+        ...photo,
+        uri: res.uri,
+      };
+      if (activeIndex === 0) setPhoto1(updated);
+      else if (activeIndex === 1) setPhoto2(updated);
+      else if (activeIndex === 2) setPhoto3(updated);
+      else if (activeIndex === 3) setPhoto4(updated);
+    } catch {
+    } finally {
+      setRotating(false);
+    }
+  }, [activeIndex, haptic, photos, playSound, rotating, setPhoto1, setPhoto2, setPhoto3, setPhoto4]);
 
   const doSubmit = useCallback(async () => {
     if (isSubmittingRef.current) {
@@ -111,20 +172,20 @@ export default function ScanReviewScreen({navigation}: Props) {
       setErrorText(message);
       haptic('error');
       playSound('error');
-    } finally {
       isSubmittingRef.current = false;
     }
   }, [haptic, playSound, state]);
 
   const handleFinishSubmit = useCallback(() => {
+    isSubmittingRef.current = false;
     setShowSubmitModal(false);
     setShowConfetti(false);
     resetScan();
     navigation.navigate('ScanStep1');
   }, [navigation, resetScan]);
 
-  useHardwareKey(doSubmit, !showSubmitModal, 'volumeDown');
-  useHardwareKey(handleRetakeCurrent, !showSubmitModal, 'volumeUp');
+  useHardwareKey(doSubmit, isFocused && !showSubmitModal, 'volumeDown');
+  useHardwareKey(handleRetakeCurrent, isFocused && !showSubmitModal, 'volumeUp');
 
   const renderSlide = useCallback(
     ({item, index}: {item: SlideItem; index: number}) => {
@@ -153,22 +214,48 @@ export default function ScanReviewScreen({navigation}: Props) {
               </View>
             )}
 
-            <View style={styles.slideHeaderPill}>
-              <Text style={styles.slideStepLabel}>
-                Halaman {item.step}: {item.title}
-              </Text>
-            </View>
+            <View style={styles.topPillRow}>
+              <View style={styles.slideHeaderPill}>
+                <Text style={styles.slideStepLabel}>
+                  Halaman {item.step}: {item.title}
+                </Text>
+              </View>
 
-            <View style={styles.slideCounterPill}>
-              <Text style={styles.slideCounterText}>
-                {item.step} / {SLIDES.length}
-              </Text>
+              <View style={styles.topRightActions}>
+                <TouchableOpacity
+                  style={styles.rotateBtn}
+                  activeOpacity={0.7}
+                  onPress={handleRotateCurrent}
+                  accessibilityLabel="Putar gambar 180 derajat"
+                  accessibilityRole="button"
+                  hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                  {rotating && activeIndex === index ? (
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                  ) : (
+                    <Svg width={15} height={15} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M21 12a9 9 0 1 1-2.64-6.36L21 8M21 3v5h-5"
+                        stroke={Colors.primary}
+                        strokeWidth={2.2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                  )}
+                </TouchableOpacity>
+
+                <View style={styles.slideCounterPill}>
+                  <Text style={styles.slideCounterText}>
+                    {item.step} / {SLIDES.length}
+                  </Text>
+                </View>
+              </View>
             </View>
           </View>
         </View>
       );
     },
-    [carouselWidth, photos],
+    [activeIndex, carouselWidth, handleRotateCurrent, photos, rotating],
   );
 
   return (
@@ -182,7 +269,12 @@ export default function ScanReviewScreen({navigation}: Props) {
           dealerName={state.dealer.nm_dealer}
           paymentType={state.dealer.payment_type}
         />
-      ) : null}
+      ) : (
+        <ScanTopDealerAlert
+          nomesin={state.nomesin}
+          isUnverified={true}
+        />
+      )}
 
       <View style={styles.bpkbCard}>
         <View style={styles.bpkbCardHeader}>
@@ -196,6 +288,7 @@ export default function ScanReviewScreen({navigation}: Props) {
 
       <View style={styles.carouselSection}>
         <FlatList
+          ref={flatListRef}
           data={SLIDES}
           keyExtractor={item => item.routeName}
           renderItem={renderSlide}
@@ -208,10 +301,62 @@ export default function ScanReviewScreen({navigation}: Props) {
           style={styles.flatList}
         />
 
+        <TouchableOpacity
+          style={[
+            styles.navArrowBtn,
+            styles.navArrowLeft,
+            activeIndex === 0 && styles.navArrowDisabled,
+          ]}
+          activeOpacity={0.7}
+          onPress={handlePrev}
+          disabled={activeIndex === 0}
+          accessibilityLabel="Halaman sebelumnya"
+          accessibilityRole="button"
+          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+          <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M15 18l-6-6 6-6"
+              stroke={activeIndex === 0 ? Colors.textTertiary : Colors.textPrimary}
+              strokeWidth={2.4}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </Svg>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.navArrowBtn,
+            styles.navArrowRight,
+            activeIndex === SLIDES.length - 1 && styles.navArrowDisabled,
+          ]}
+          activeOpacity={0.7}
+          onPress={handleNext}
+          disabled={activeIndex === SLIDES.length - 1}
+          accessibilityLabel="Halaman berikutnya"
+          accessibilityRole="button"
+          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+          <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M9 18l6-6-6-6"
+              stroke={
+                activeIndex === SLIDES.length - 1
+                  ? Colors.textTertiary
+                  : Colors.textPrimary
+              }
+              strokeWidth={2.4}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </Svg>
+        </TouchableOpacity>
+
         <View style={styles.dotsRow}>
           {SLIDES.map((_, i) => (
-            <View
+            <TouchableOpacity
               key={i}
+              onPress={() => scrollToIndex(i)}
+              hitSlop={{top: 10, bottom: 10, left: 6, right: 6}}
               style={[
                 styles.dot,
                 i === activeIndex ? styles.dotActive : styles.dotInactive,
@@ -273,34 +418,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
   },
   bpkbCard: {
-    backgroundColor: Colors.neutral,
+    backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.darkNavBarBorder,
+    borderColor: Colors.borderLight,
     marginBottom: Spacing.sm,
+    shadowColor: Colors.shadowDark,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
   bpkbCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   bpkbLabel: {
-    fontFamily: 'Poppins-SemiBold',
+    fontFamily: 'Poppins-Bold',
     fontSize: 11.5,
-    color: Colors.emeraldMint,
+    color: Colors.primary,
   },
   mesinLabel: {
     fontFamily: 'JetBrainsMono-Regular',
     fontSize: 11,
-    color: Colors.textTertiary,
+    color: Colors.textSecondary,
   },
   bpkbValue: {
     fontFamily: 'JetBrainsMono-Bold',
     fontSize: 20,
-    color: Colors.white,
+    color: Colors.textHeadline,
     letterSpacing: 0.8,
   },
   carouselSection: {
@@ -316,11 +466,16 @@ const styles = StyleSheet.create({
   },
   imageCard: {
     flex: 1,
-    backgroundColor: Colors.neutral,
-    borderRadius: Radius.xl,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: Colors.darkNavBarBorder,
+    borderColor: Colors.borderLight,
+    shadowColor: Colors.shadowDark,
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   emptyPhotoBox: {
     flex: 1,
@@ -338,50 +493,106 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.neutral,
+    backgroundColor: Colors.surface,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: Radius.full,
     borderWidth: 1,
     borderColor: Colors.emeraldMint,
     gap: 8,
+    shadowColor: Colors.shadowDark,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   processingText: {
     fontFamily: 'Poppins-Medium',
     fontSize: 11,
     color: Colors.emeraldMint,
   },
-  slideHeaderPill: {
+  topPillRow: {
     position: 'absolute',
     top: 10,
     left: 10,
-    backgroundColor: Colors.dimDark,
+    right: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  slideHeaderPill: {
+    backgroundColor: Colors.secondary,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: Radius.full,
     borderWidth: 1,
-    borderColor: Colors.darkNavBarBorder,
+    borderColor: Colors.secondary,
   },
   slideStepLabel: {
-    fontFamily: 'Poppins-Medium',
+    fontFamily: 'Poppins-Bold',
     fontSize: 11,
-    color: Colors.white,
+    color: Colors.primary,
   },
-  slideCounterPill: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: Colors.dimDark,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  topRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  rotateBtn: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surface,
     borderRadius: Radius.full,
     borderWidth: 1,
-    borderColor: Colors.darkNavBarBorder,
+    borderColor: Colors.borderLight,
+    shadowColor: Colors.shadowDark,
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  slideCounterPill: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
   },
   slideCounterText: {
     fontFamily: 'JetBrainsMono-Bold',
     fontSize: 11,
-    color: Colors.emeraldMint,
+    color: Colors.textHeadline,
+  },
+  navArrowBtn: {
+    position: 'absolute',
+    top: '44%',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.navButtonBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.shadowDark,
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.16,
+    shadowRadius: 6,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: Colors.navButtonBorder,
+    zIndex: 10,
+  },
+  navArrowLeft: {
+    left: 8,
+  },
+  navArrowRight: {
+    right: 8,
+  },
+  navArrowDisabled: {
+    opacity: 0.22,
+    backgroundColor: Colors.navButtonDisabledBg,
   },
   dotsRow: {
     flexDirection: 'row',
@@ -396,11 +607,11 @@ const styles = StyleSheet.create({
   },
   dotActive: {
     width: 20,
-    backgroundColor: Colors.emeraldMint,
+    backgroundColor: Colors.primary,
   },
   dotInactive: {
     width: 6,
-    backgroundColor: Colors.paginationInactive,
+    backgroundColor: Colors.borderLight,
   },
   errorBanner: {
     ...Typography.bodySmall,
@@ -429,14 +640,14 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.darkNavBarBorder,
-    backgroundColor: Colors.darkCardBg,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
   },
   retakeBtnText: {
     fontFamily: 'Poppins-Bold',
     fontSize: 12.5,
-    color: Colors.white,
+    color: Colors.textHeadline,
   },
   sendBtn: {
     flex: 1,

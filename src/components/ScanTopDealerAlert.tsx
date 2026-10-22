@@ -4,16 +4,50 @@ import Svg, {Path} from 'react-native-svg';
 import {Colors, Radius, Spacing} from '../constants';
 
 interface ScanTopDealerAlertProps {
-  dealerName: string;
+  dealerName?: string;
   paymentType?: 'CASH' | 'CREDIT';
+  nomesin?: string;
+  isUnverified?: boolean;
 }
 
 export default function ScanTopDealerAlert({
   dealerName,
   paymentType,
+  nomesin,
+  isUnverified = false,
 }: ScanTopDealerAlertProps) {
-  if (!dealerName) {
-    return null;
+  if (isUnverified || !dealerName) {
+    return (
+      <View style={styles.floatingContainer}>
+        <View style={[styles.card, styles.unverifiedCard]}>
+          <View style={styles.leftContent}>
+            <View style={[styles.iconCircle, styles.unverifiedIconCircle]}>
+              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M12 9v4M12 17h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
+                  stroke={Colors.warning}
+                  strokeWidth={2.4}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+            </View>
+            <View style={styles.unverifiedTextCol}>
+              <Text style={styles.unverifiedTitleText} numberOfLines={1}>
+                Mesin: {nomesin || 'Belum Terbaca'}
+              </Text>
+              <Text style={styles.unverifiedSubText} numberOfLines={1}>
+                Dealer belum ada • Lengkapi di web
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.unverifiedBadge}>
+            <Text style={styles.unverifiedBadgeText}>WARNING</Text>
+          </View>
+        </View>
+      </View>
+    );
   }
 
   const isCash = paymentType === 'CASH';
@@ -85,6 +119,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
+  unverifiedCard: {
+    backgroundColor: Colors.unverifiedDarkCard,
+    borderWidth: 1.5,
+    borderColor: Colors.warning,
+  },
   leftContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -99,6 +138,37 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  unverifiedIconCircle: {
+    backgroundColor: Colors.unverifiedIconCircle,
+  },
+  unverifiedTextCol: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  unverifiedTitleText: {
+    fontFamily: 'JetBrainsMono-Bold',
+    fontSize: 12,
+    color: Colors.white,
+  },
+  unverifiedSubText: {
+    fontFamily: 'Poppins-Regular',
+    fontSize: 10,
+    color: Colors.unverifiedSubText,
+  },
+  unverifiedBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.unverifiedBadgeBg,
+    borderWidth: 1,
+    borderColor: Colors.warning,
+  },
+  unverifiedBadgeText: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 9.5,
+    color: Colors.warning,
+    letterSpacing: 0.5,
   },
   dealerNameText: {
     fontFamily: 'Poppins-Bold',

@@ -51,9 +51,13 @@ export default function HeroScannerCard({onPressScan}: HeroScannerCardProps) {
         />
       </View>
 
-      <Text style={styles.headline}>Siap Memindai BPKB</Text>
+      <Text style={styles.headline}>
+        {isConnected ? 'Siap Memindai BPKB' : 'Scanner Mode Tidur'}
+      </Text>
       <Text style={styles.subHeadline}>
-        Injak pedal kaki Bluetooth atau ketuk tombol di bawah.
+        {isConnected
+          ? 'Injak pedal kaki Bluetooth atau ketuk tombol di bawah.'
+          : 'Nyalakan atau hubungkan pedal Bluetooth pemindai.'}
       </Text>
 
       <TouchableOpacity
@@ -61,7 +65,7 @@ export default function HeroScannerCard({onPressScan}: HeroScannerCardProps) {
         activeOpacity={0.85}
         onPress={onPressScan}>
         <View style={styles.buttonContentRow}>
-          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
             <Path
               d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
               stroke={Colors.white}
@@ -88,7 +92,7 @@ export default function HeroScannerCard({onPressScan}: HeroScannerCardProps) {
             ? styles.triggerHintPillConnected
             : styles.triggerHintPillDisconnected,
         ]}>
-        <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+        <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
           <Path
             d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"
             stroke={isConnected ? Colors.primary : Colors.textTertiary}
@@ -105,8 +109,8 @@ export default function HeroScannerCard({onPressScan}: HeroScannerCardProps) {
               : styles.triggerHintTextDisconnected,
           ]}>
           {isConnected
-            ? 'Pedal Bluetooth Terhubung '
-            : 'Pedal Belum Tersambung • Tahan Pedal Sampai Terkalibrasi'}
+            ? 'Pedal Bluetooth Terhubung'
+            : 'Pedal Belum Tersambung • Siap Dipindai'}
         </Text>
       </View>
     </View>
@@ -115,19 +119,21 @@ export default function HeroScannerCard({onPressScan}: HeroScannerCardProps) {
 
 const styles = StyleSheet.create({
   card: {
+    flex: 1,
     backgroundColor: Colors.surface,
     borderRadius: Radius.xxl,
     paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.lg,
+    paddingTop: 12,
+    paddingBottom: 14,
     marginHorizontal: Spacing.xl,
-    marginBottom: Spacing.lg,
+    marginBottom: 6,
     alignItems: 'center',
+    justifyContent: 'space-between',
     shadowColor: Colors.primary,
-    shadowOffset: {width: 0, height: 10},
-    shadowOpacity: 0.14,
-    shadowRadius: 20,
-    elevation: 5,
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 4,
     borderWidth: 1,
     borderColor: Colors.borderLight,
   },
@@ -136,7 +142,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: Spacing.xs,
+    marginBottom: 4,
   },
   systemTag: {
     backgroundColor: Colors.surfaceAlt,
@@ -146,7 +152,7 @@ const styles = StyleSheet.create({
   },
   systemTagText: {
     fontFamily: 'Poppins-Bold',
-    fontSize: 9.5,
+    fontSize: 9,
     color: Colors.textTertiary,
     letterSpacing: 0.5,
   },
@@ -180,7 +186,7 @@ const styles = StyleSheet.create({
   },
   telemetryText: {
     fontFamily: 'Poppins-Bold',
-    fontSize: 10,
+    fontSize: 9.5,
   },
   telemetryTextConnected: {
     color: Colors.primary,
@@ -190,10 +196,12 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     width: '100%',
-    height: 145,
+    flex: 1,
+    minHeight: 85,
+    maxHeight: 145,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.xs,
+    marginVertical: 4,
   },
   scannerImage: {
     width: '100%',
@@ -201,34 +209,34 @@ const styles = StyleSheet.create({
   },
   headline: {
     fontFamily: 'Poppins-Bold',
-    fontSize: 20,
-    lineHeight: 26,
+    fontSize: 18,
+    lineHeight: 24,
     color: Colors.textHeadline,
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   subHeadline: {
     fontFamily: 'Poppins-Regular',
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 11.5,
+    lineHeight: 16,
     color: Colors.textSecondary,
     textAlign: 'center',
     maxWidth: '90%',
-    marginBottom: Spacing.md,
+    marginBottom: 8,
   },
   primaryButton: {
     width: '100%',
-    height: 52,
+    height: 48,
     backgroundColor: Colors.primary,
     borderRadius: Radius.full,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: Colors.primary,
-    shadowOffset: {width: 0, height: 6},
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
+    shadowOffset: {width: 0, height: 5},
+    shadowOpacity: 0.32,
+    shadowRadius: 12,
     elevation: 4,
-    marginBottom: Spacing.sm,
+    marginBottom: 8,
   },
   buttonContentRow: {
     flexDirection: 'row',
@@ -237,7 +245,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontFamily: 'Poppins-Bold',
-    fontSize: 15,
+    fontSize: 14.5,
     color: Colors.white,
     letterSpacing: 0.3,
   },
@@ -245,7 +253,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: Radius.full,
     borderWidth: 1,
     gap: 6,
@@ -260,7 +268,7 @@ const styles = StyleSheet.create({
   },
   triggerHintText: {
     fontFamily: 'Poppins-Medium',
-    fontSize: 11,
+    fontSize: 10.5,
   },
   triggerHintTextConnected: {
     color: Colors.primary,

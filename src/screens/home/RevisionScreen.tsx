@@ -1,4 +1,4 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useMemo, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,16 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  Image,
+  InteractionManager,
 } from 'react-native';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useIsFocused, useNavigation} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useTourGuideController} from 'rn-tourguide';
 import Svg, {Path} from 'react-native-svg';
-import {Colors, Spacing, Radius} from '../../constants';
+import {Colors, Spacing, Radius, getRandomOtherMascot} from '../../constants';
 import {useTabNav} from '../../contexts/TabNavContext';
+import {hasSeenTour, markTourSeen} from '../../utils/storage';
 import revisionsData from '../../mock/revisions.json';
 
 interface RevisionItem {
@@ -30,13 +34,56 @@ const REVISION_LIST: RevisionItem[] = revisionsData as RevisionItem[];
 export default function RevisionScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
   const {setIsTabBarHidden} = useTabNav();
+  const mascotSource = useMemo(() => getRandomOtherMascot(), []);
+  const {start, stop, canStart, TourGuideZone} = useTourGuideController('revision');
+  const stopRef = useRef(stop);
+  stopRef.current = stop;
+  const startRef = useRef(start);
+  startRef.current = start;
+  const hasCheckedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isFocused || !canStart || hasCheckedRef.current) {
+      return;
+    }
+    hasCheckedRef.current = true;
+
+    if (hasSeenTour('revision')) {
+      return;
+    }
+
+    let isActive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (!isActive) {
+        return;
+      }
+      timer = setTimeout(() => {
+        if (isActive && !hasSeenTour('revision')) {
+          startRef.current?.();
+          markTourSeen('revision');
+        }
+      }, 500);
+    });
+
+    return () => {
+      isActive = false;
+      task.cancel();
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [canStart, isFocused]);
 
   useFocusEffect(
     useCallback(() => {
       setIsTabBarHidden(true);
       return () => {
         setIsTabBarHidden(false);
+        stopRef.current?.();
       };
     }, [setIsTabBarHidden]),
   );
@@ -72,7 +119,18 @@ export default function RevisionScreen() {
           <Text style={styles.topBarSubtitle}>Kendali Mutu Samsat</Text>
           <Text style={styles.topBarTitle}>Berkas Revisi</Text>
         </View>
-        <View style={styles.topBarRightSlot} />
+        <TouchableOpacity
+          style={styles.topBarRightSlot}
+          onPress={() => canStart && start()}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Buka Panduan Berkas Revisi">
+          <Image
+            source={mascotSource}
+            style={styles.topBarMascot}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -82,55 +140,92 @@ export default function RevisionScreen() {
           {paddingBottom: Spacing.huge + insets.bottom},
         ]}
         showsVerticalScrollIndicator={false}>
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryBadge}>
-            <Text style={styles.summaryBadgeText}>{REVISION_LIST.length}</Text>
+        <TourGuideZone
+          zone={1}
+          text="Total berkas BPKB yang belum memenuhi standar verifikasi Samsat dan butuh penanganan segera."
+          borderRadius={20}
+          shape="rectangle">
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryBadge}>
+              <Text style={styles.summaryBadgeText}>{REVISION_LIST.length}</Text>
+            </View>
+            <View style={styles.summaryMeta}>
+              <Text style={styles.summaryTitle}>Berkas Butuh Tindakan</Text>
+              <Text style={styles.summarySub}>
+                Pisahkan fisik berkas berikut dari tumpukan dealer sebelum jam 16:00.
+              </Text>
+            </View>
           </View>
-          <View style={styles.summaryMeta}>
-            <Text style={styles.summaryTitle}>Berkas Butuh Tindakan</Text>
-            <Text style={styles.summarySub}>
-              Pisahkan fisik berkas berikut dari tumpukan dealer sebelum jam 16:00.
-            </Text>
-          </View>
-        </View>
+        </TourGuideZone>
 
         <View style={styles.list}>
-          {REVISION_LIST.map(item => (
-            <View key={item.id} style={styles.itemCard}>
-              <View style={styles.cardHeaderRow}>
-                <View>
-                  <Text style={styles.bpkbNumber}>{item.bpkbNumber}</Text>
-                  <Text style={styles.ownerText}>{item.ownerName} • {item.vehiclePlate}</Text>
+          {REVISION_LIST.map((item, index) => {
+            const cardContent = (
+              <View key={item.id} style={styles.itemCard}>
+                <View style={styles.cardHeaderRow}>
+                  <View>
+                    <Text style={styles.bpkbNumber}>{item.bpkbNumber}</Text>
+                    <Text style={styles.ownerText}>{item.ownerName} • {item.vehiclePlate}</Text>
+                  </View>
+                  <View style={styles.timeBadge}>
+                    <Text style={styles.timeBadgeText}>{item.timestamp}</Text>
+                  </View>
                 </View>
-                <View style={styles.timeBadge}>
-                  <Text style={styles.timeBadgeText}>{item.timestamp}</Text>
+
+                <Text style={styles.dealerText}>{item.dealerName}</Text>
+
+                <View style={styles.issueBox}>
+                  <View style={styles.issueIconBox}>
+                    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        stroke={Colors.primary}
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                  </View>
+                  <Text style={styles.issueText}>{item.issue}</Text>
                 </View>
+
+                {index === 0 ? (
+                  <TourGuideZone
+                    zone={3}
+                    text="Ketuk untuk langsung membuka kamera pemindaian ulang bagi berkas yang buram atau tidak presisi."
+                    borderRadius={12}
+                    shape="rectangle">
+                    <TouchableOpacity
+                      style={styles.retakeBtn}
+                      activeOpacity={0.85}>
+                      <Text style={styles.retakeBtnText}>Foto Ulang Berkas Ini</Text>
+                    </TouchableOpacity>
+                  </TourGuideZone>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.retakeBtn}
+                    activeOpacity={0.85}>
+                    <Text style={styles.retakeBtnText}>Foto Ulang Berkas Ini</Text>
+                  </TouchableOpacity>
+                )}
               </View>
+            );
 
-              <Text style={styles.dealerText}>{item.dealerName}</Text>
+            if (index === 0) {
+              return (
+                <TourGuideZone
+                  key={item.id}
+                  zone={2}
+                  text="Identitas BPKB bermasalah, mencakup nomor registrasi, nomor polisi, nama dealer, dan catatan kendala verifikasi."
+                  borderRadius={20}
+                  shape="rectangle">
+                  {cardContent}
+                </TourGuideZone>
+              );
+            }
 
-              <View style={styles.issueBox}>
-                <View style={styles.issueIconBox}>
-                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                    <Path
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                      stroke={Colors.primary}
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </Svg>
-                </View>
-                <Text style={styles.issueText}>{item.issue}</Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.retakeBtn}
-                activeOpacity={0.85}>
-                <Text style={styles.retakeBtnText}>Foto Ulang Berkas Ini</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+            return cardContent;
+          })}
         </View>
       </ScrollView>
     </View>
@@ -183,7 +278,18 @@ const styles = StyleSheet.create({
     color: Colors.textHeadline,
   },
   topBarRightSlot: {
-    width: 40,
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBarMascot: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.surface,
   },
   scrollView: {
     flex: 1,
