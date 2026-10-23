@@ -1,7 +1,5 @@
 import { apiRequest } from './client';
 import { compressImage } from '../utils/imageCompressor';
-import mockHistory from '../mock/history.json';
-import mockPerformance from '../mock/performance.json';
 
 export interface DealerData {
   fk_dealer: string;
@@ -56,21 +54,7 @@ export async function getDealer(nomesin: string): Promise<DealerResponse> {
     }
     return null;
   } catch {
-    const match = mockHistory.find(
-      h => h.no_mesin.toLowerCase() === nomesin.toLowerCase(),
-    );
-    if (match) {
-      return {
-        fk_dealer: match.dealer_code,
-        nm_dealer: match.dealer_name,
-        payment_type: (match.payment_type as 'CASH' | 'CREDIT') ?? 'CREDIT',
-      };
-    }
-    return {
-      fk_dealer: 'MA-01',
-      nm_dealer: 'Menara Agung Veteran',
-      payment_type: nomesin.length % 2 === 0 ? 'CASH' : 'CREDIT',
-    };
+    return null;
   }
 }
 
@@ -183,26 +167,29 @@ export async function getPerformance(params?: {
     const target = act.target_bpkb || 100;
     const percent = Math.min(Math.round((completed / target) * 100), 100);
 
-    const baseMock = mockPerformance as PerformanceResponse;
-
     return {
       summary: {
         totalThisMonth: completed,
         targetThisMonth: target,
         achievementPercentage: percent,
-        avgScanSeconds: baseMock.summary.avgScanSeconds,
-        accuracyRate: baseMock.summary.accuracyRate,
+        avgScanSeconds: 0,
+        accuracyRate: 0,
       },
-      weekly: baseMock.weekly,
-      monthly: baseMock.monthly.map((m, idx) => {
-        if (idx === baseMock.monthly.length - 1 && completed > 0) {
-          return {...m, total: completed};
-        }
-        return m;
-      }),
+      weekly: [],
+      monthly: [],
     };
   } catch {
-    return mockPerformance as PerformanceResponse;
+    return {
+      summary: {
+        totalThisMonth: 0,
+        targetThisMonth: 100,
+        achievementPercentage: 0,
+        avgScanSeconds: 0,
+        accuracyRate: 0,
+      },
+      weekly: [],
+      monthly: [],
+    };
   }
 }
 
@@ -342,16 +329,16 @@ export async function getBpkbHistory(params?: {
         no_mesin: item.no_mesin,
         no_bpkb: item.no_bpkb,
         nama_konsumen: item.nama_konsumen,
-        dealer_code: (item as any).dealer_code ?? 'MA-01',
-        dealer_name: (item as any).dealer_name ?? 'Menara Agung Veteran',
+        dealer_code: (item as any).dealer_code ?? '',
+        dealer_name: (item as any).dealer_name ?? '',
         status: item.status,
         stage: item.stage,
         created_at: item.created_at,
         pdf_url: item.download_url ?? item.file_url ?? item.pdf_path,
       }));
     }
-    return mockHistory as BpkbHistoryItem[];
+    return [];
   } catch {
-    return mockHistory as BpkbHistoryItem[];
+    return [];
   }
 }
